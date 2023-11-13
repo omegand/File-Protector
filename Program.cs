@@ -57,7 +57,10 @@ public class Program
             Environment.Exit(1);
             return;
         }
+        Stopwatch sw = Stopwatch.StartNew();
         ProcessFiles(files);
+        sw.Stop();
+        Console.WriteLine($"Process took: {sw.Elapsed}");
         Console.WriteLine("Peak Memory Usage: " + (currentProcess.PeakWorkingSet64 / (1024 * 1024)) + " MB");
         Console.WriteLine("Done.");
     }
@@ -84,16 +87,13 @@ public class Program
     {
         Parallel.ForEach(files, file =>
         {
-            byte[] data = FileOperations.ReadFile(file);
             if (encrypted)
             {
-                data = Crypto.Decrypt(data);
-                FileOperations.WriteDecrypted(file, data);
+                Crypto.Decrypt(file);
             }
             else
             {
-                data = Crypto.Encrypt(data);
-                FileOperations.WriteEncrypted(file, data);
+                Crypto.Encrypt(file);
             }
         });
     }

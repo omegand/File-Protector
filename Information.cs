@@ -3,7 +3,7 @@ using static FileProtector.Program;
 
 namespace FileProtector;
 
-public struct Information
+public readonly struct Information
 {
     public Information(Dictionary<bool, string[]> allFiles, Actions action)
     {

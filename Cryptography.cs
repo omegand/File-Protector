@@ -5,6 +5,7 @@ namespace FileProtector;
 public class Cryptography
 {
     private readonly Aes aes;
+    private const int bufferSize = 1024 * 1024 * 16; // From my research, seems to be a good number for performance and ram-usage
     public Cryptography(string password)
     {
         aes = Aes.Create();
@@ -13,42 +14,70 @@ public class Cryptography
     }
 
     public string GetAesKey() => Convert.ToBase64String(aes.Key);
-    public byte[] Encrypt(byte[] bytes)
+    public void Encrypt(string file)
     {
+        if (!ValidateFile(file)) return;
+
         try
         {
-            using ICryptoTransform encryptor = aes.CreateEncryptor(); //ICryptoTransform is not thread-safe
-            using MemoryStream memoryStream = new(bytes.Length);
-            using CryptoStream cryptoStream = new(memoryStream, encryptor, CryptoStreamMode.Write);
-            cryptoStream.Write(bytes, 0, bytes.Length);
-            cryptoStream.FlushFinalBlock();
 
-            return memoryStream.ToArray();
+            using (var encryptor = aes.CreateEncryptor())
+            {
+                using var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+                using var outputStream = new FileStream(file + FileOperations.encryptionAppend, FileMode.Create, FileAccess.Write);
+                using var cryptoStream = new CryptoStream(outputStream, encryptor, CryptoStreamMode.Write);
+                byte[] buffer = new byte[bufferSize];
+                int bytesRead;
+
+                while ((bytesRead = inputStream.Read(buffer, 0, bufferSize)) > 0)
+                {
+                    cryptoStream.Write(buffer, 0, bytesRead);
+                }
+            }
+            FileOperations.Delete(file);
+
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to encrypt: \nError: {ex}");
-            return Array.Empty<byte>();
+            Console.WriteLine($"Failed to encrypt: {file} \nError: {ex}");
         }
     }
 
-    public byte[] Decrypt(byte[] bytes)
+    public void Decrypt(string file)
     {
+        if (!ValidateFile(file)) return;
+
         try
         {
-            using ICryptoTransform decryptor = aes.CreateDecryptor();
-            using MemoryStream memoryStream = new(bytes.Length);
-            using CryptoStream cryptoStream = new(memoryStream, decryptor, CryptoStreamMode.Write);
-            cryptoStream.Write(bytes, 0, bytes.Length);
-            cryptoStream.FlushFinalBlock();
+            using (var decryptor = aes.CreateDecryptor())
+            {
+                using var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+                using var outputStream = new FileStream(Path.ChangeExtension(file, null), FileMode.Create, FileAccess.Write);
+                using CryptoStream cryptoStream = new(outputStream, decryptor, CryptoStreamMode.Write);
+                byte[] buffer = new byte[bufferSize];
+                int bytesRead;
 
-            return memoryStream.ToArray();
+                while ((bytesRead = inputStream.Read(buffer, 0, bufferSize)) > 0)
+                {
+                    cryptoStream.Write(buffer, 0, bytesRead);
+                }
+            }
+            FileOperations.Delete(file);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to decrypt: \nError: {ex}");
-            return Array.Empty<byte>();
+            Console.WriteLine($"Failed to decrypt: {file} \nError: {ex}");
         }
+    }
+
+    private static bool ValidateFile(string file)
+    {
+        if (!File.Exists(file))
+        {
+            Console.WriteLine($"File does not exist: {file}");
+            return false;
+        }
+        return true;
     }
 
 }
