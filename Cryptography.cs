@@ -5,22 +5,20 @@ namespace FileProtector;
 public class Cryptography
 {
     private readonly Aes aes;
-    private const int bufferSize = 1024 * 1024 * 16; // From my research, seems to be a good number for performance and ram-usage
-    public Cryptography(string password)
+    public const int bufferSize = 1024 * 1024 * 16; // From my research, seems to be a good number for performance and ram-usage
+    public Cryptography(byte[] aesKey, byte[] IV)
     {
         aes = Aes.Create();
-        aes.IV = KeyDerivation.DeriveIV(password);
-        aes.Key = KeyDerivation.DeriveAesKey(password);
+        aes.IV = IV;
+        aes.Key = aesKey;
     }
 
-    public string GetAesKey() => Convert.ToBase64String(aes.Key);
     public void Encrypt(string file)
     {
-        if (!ValidateFile(file)) return;
+        if (!FileOperations.ValidateFile(file)) return;
 
         try
         {
-
             using (var encryptor = aes.CreateEncryptor())
             {
                 using var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
@@ -45,7 +43,7 @@ public class Cryptography
 
     public void Decrypt(string file)
     {
-        if (!ValidateFile(file)) return;
+        if (!FileOperations.ValidateFile(file)) return;
 
         try
         {
@@ -68,16 +66,6 @@ public class Cryptography
         {
             Console.WriteLine($"Failed to decrypt: {file} \nError: {ex}");
         }
-    }
-
-    private static bool ValidateFile(string file)
-    {
-        if (!File.Exists(file))
-        {
-            Console.WriteLine($"File does not exist: {file}");
-            return false;
-        }
-        return true;
     }
 
 }

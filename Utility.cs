@@ -23,4 +23,42 @@ public class Utility
 
         return input;
     }
+
+    public static bool ConfirmAction(string message)
+    {
+        Console.WriteLine(message);
+        Console.WriteLine("Press 'A' to [A]ccept or 'C' to [C]ancel");
+
+        while (true)
+        {
+            ConsoleKeyInfo key = Console.ReadKey();
+
+            switch (key.Key)
+            {
+                case ConsoleKey.A:
+                    Console.WriteLine("\nAction accepted!");
+                    return true;
+
+                case ConsoleKey.C:
+                    Console.WriteLine("\nAction canceled.");
+                    return false;
+
+                default:
+                    Console.WriteLine("\nInvalid input. Press 'A' to accept or 'C' to cancel");
+                    break;
+            }
+        }
+    }
+
+    public static bool BytesEqual(byte[] a, byte[] b)
+    {
+        int xor = a.Length ^ b.Length;
+
+        for (int i = 0; i < a.Length && i < b.Length; ++i)
+        {
+            xor |= a[i] ^ b[i];
+        }
+        return xor == 0;
+    }
+
 }

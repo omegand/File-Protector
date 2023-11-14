@@ -1,19 +1,20 @@
 ﻿using Microsoft.Win32;
 
 namespace FileProtector;
-
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "CONSTRUCTOR CHECKS FOR WINDOWS")]
 public class RegistryOperations
 {
     public static readonly string gibberishRegistryPath = @"SOFTWARE\Yahoo\Common\Okz";
-    public static readonly string registryKey = "yta";
+    public static readonly string registryAesKey = "yta";
     static RegistryOperations()
     {
         WindowsCheck();
     }
-    public static void SaveIntoRegistry(string value)
+    public static void SaveIntoRegistry(byte[] value)
     {
+
         using RegistryKey key = Registry.CurrentUser.CreateSubKey(gibberishRegistryPath);
-        key.SetValue(registryKey, value);
+        key.SetValue(registryAesKey, value, RegistryValueKind.Binary);
     }
 
     public static void DeletePasswordFromRegistry()
@@ -33,12 +34,15 @@ public class RegistryOperations
         }
     }
     /// <summary>
-    /// Gets password object, or null if not found.
+    /// Retrieves a registry object or returns null if not found.
     /// </summary>
+    /// <param name="key"></param>
     /// <returns></returns>
-    public static object? GetPassword()
+    public static object? GetValue(string key)
     {
-        return Registry.CurrentUser.OpenSubKey(gibberishRegistryPath)?.GetValue(registryKey);
+        var registryKey = Registry.CurrentUser.OpenSubKey(gibberishRegistryPath, false);
+
+        return registryKey?.GetValue(key);
     }
 
     private static void WindowsCheck()

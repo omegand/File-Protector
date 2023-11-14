@@ -10,7 +10,6 @@ public readonly struct Information
         EncryptCount = allFiles[false].Length;
         DecryptCount = allFiles[true].Length;
         Action = action;
-        Console.WriteLine(ToString());
     }
 
     public int EncryptCount { get; }
@@ -20,7 +19,7 @@ public readonly struct Information
     public override string ToString()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("You are about to process");
+        sb.AppendLine("You are about to process:");
 
         switch (Action)
         {

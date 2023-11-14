@@ -24,4 +24,14 @@ public class FileOperations
         return new Dictionary<bool, string[]> { { true, encryptedFiles }, { false, nonEncryptedFiles } };
     }
 
+    public static bool ValidateFile(string file)
+    {
+        if (!File.Exists(file))
+        {
+            Console.WriteLine($"File does not exist: {file}");
+            return false;
+        }
+        return true;
+    }
+
 }

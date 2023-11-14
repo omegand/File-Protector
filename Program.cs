@@ -5,10 +5,6 @@ namespace FileProtector;
 
 public class Program
 {
-    public static bool SafeMode { get; set; }
-    private static Cryptography Crypto { get; set; }
-    private static Actions Action { get; set; } = Actions.Both;
-
     public enum Actions
     {
         Encrypt,
@@ -16,54 +12,85 @@ public class Program
         Both
     }
 
+    public static bool SafeMode { get; set; }
+    public static string CurrentPassword { get; set; }
+    private static Cryptography Crypto { get; set; }
+    private static Actions Action { get; set; } = Actions.Both;
 
     static void Main(string[] args)
     {
         Parser.Default.ParseArguments<Options, Reset>(args)
-            .WithParsed<Options>(o => { Main(o); })
-            .WithParsed<Reset>(r =>
-            {
-                RegistryOperations.DeletePasswordFromRegistry();
-            });
+            .WithParsed<Options>(RunWithOptions)
+            .WithParsed<Reset>(_ => RunWithReset());
     }
-    private static void Main(Options o)
+
+    private static void RunWithOptions(Options options)
     {
-        Process currentProcess = Process.GetCurrentProcess();
         Console.WriteLine("Do not exit the program until it's done, as it might corrupt your files.");
-        if (o.EncryptOnly && o.DecryptOnly)
+        if (!ValidateOptions(options))
         {
-            Console.WriteLine("Only specify -e or -d, not both.");
             return;
         }
-        if (!Directory.Exists(o.Directory))
+        SetAction(options);
+        CurrentPassword = options.Password;
+        byte[] savedPassword = PasswordManager.GetPassword();
+        byte[]? aesKey = PasswordManager.VerifyPassword(CurrentPassword, savedPassword);
+
+        if (aesKey == null)
         {
-            Console.WriteLine($"Argument: {o.Directory} isn't a directory or doesn't exist, try again.");
+            Console.WriteLine("Password does not match.");
             return;
-        }
-        if (o.SafeMode)
-        {
-            SafeMode = o.SafeMode;
-            Console.WriteLine("Running in safe mode.");
         }
 
-        if (o.EncryptOnly) Action = Actions.Encrypt;
-        if (o.DecryptOnly) Action = Actions.Decrypt;
-        Crypto = new(o.Password);
-        CheckPassword();
-        var files = FileOperations.GetFiles(o.Directory);
-        _ = new Information(files, Action);
-        if (!ConfirmAction())
+        byte[] IV = KeyDerivation.DeriveIV(aesKey);
+        Crypto = new(aesKey, IV);
+
+        Dictionary<bool, string[]> files = FileOperations.GetFiles(options.Directory);
+        Information info = new(files, Action);
+
+        if (!Utility.ConfirmAction(info.ToString()))
         {
             Environment.Exit(1);
             return;
         }
+
         Stopwatch sw = Stopwatch.StartNew();
         ProcessFiles(files);
         sw.Stop();
         Console.WriteLine($"Process took: {sw.Elapsed}");
-        Console.WriteLine("Peak Memory Usage: " + (currentProcess.PeakWorkingSet64 / (1024 * 1024)) + " MB");
+        Console.WriteLine("Peak Memory Usage: " + (Process.GetCurrentProcess().PeakWorkingSet64 / (1024 * 1024)) + " MB");
         Console.WriteLine("Done.");
     }
+    private static bool ValidateOptions(Options options)
+    {
+        if (options.EncryptOnly && options.DecryptOnly)
+        {
+            Console.WriteLine("Only specify -e or -d, not both.");
+            return false;
+        }
+
+        if (!Directory.Exists(options.Directory))
+        {
+            Console.WriteLine($"Argument: {options.Directory} isn't a directory or doesn't exist, try again.");
+            return false;
+        }
+
+        if (options.SafeMode)
+        {
+            SafeMode = options.SafeMode;
+            Console.WriteLine("Running in safe mode.");
+        }
+
+        return true;
+    }
+
+    private static void SetAction(Options options)
+    {
+        if (options.EncryptOnly) Action = Actions.Encrypt;
+        if (options.DecryptOnly) Action = Actions.Decrypt;
+    }
+
+
 
     //allFiles, true = encrypted files, false = regular
     private static void ProcessFiles(Dictionary<bool, string[]> allFiles)
@@ -97,71 +124,13 @@ public class Program
             }
         });
     }
-
-    private static void CheckPassword()
+    private static void RunWithReset()
     {
-        var existingKey = RegistryOperations.GetPassword();
-        if (existingKey == null)
+        if (!Utility.ConfirmAction("You are about to delete your password, are you sure?"))
         {
-            Console.WriteLine("Password not found.");
-            CreatePassword();
+            Environment.Exit(1);
+            return;
         }
-        else
-        {
-            if (existingKey.ToString() != Crypto.GetAesKey())
-            {
-                Console.WriteLine("Password is incorrect.");
-                Environment.Exit(1);
-            }
-            Console.WriteLine("Password is correct.");
-        }
+        RegistryOperations.DeletePasswordFromRegistry();
     }
-
-    private static void CreatePassword()
-    {
-        Console.WriteLine("Creating a new password... (If you have already created a password for this PC, use the same one again)");
-        string[] passwords = new string[3];
-        passwords[0] = Utility.GetInput("Enter your password: ");
-        passwords[1] = Utility.GetInput("Repeat your password: ");
-        passwords[2] = Utility.GetInput("Repeat your password again: ");
-
-
-        if (passwords.All(p => p == passwords[0]))
-        {
-            RegistryOperations.SaveIntoRegistry(Crypto.GetAesKey());
-            Console.WriteLine("\nPassword created successfully!");
-            Console.WriteLine(passwords[0]);
-        }
-        else
-        {
-            Console.WriteLine("\nPasswords do not match. Please try again.");
-            CreatePassword();
-        }
-    }
-
-    private static bool ConfirmAction()
-    {
-        Console.WriteLine("Press 'A' to [A]ccept or 'C' to [C]ancel");
-
-        while (true)
-        {
-            ConsoleKeyInfo key = Console.ReadKey();
-
-            switch (key.Key)
-            {
-                case ConsoleKey.A:
-                    Console.WriteLine("\nAction accepted!");
-                    return true;
-
-                case ConsoleKey.C:
-                    Console.WriteLine("\nAction canceled.");
-                    return false;
-
-                default:
-                    Console.WriteLine("\nInvalid input. Press 'A' to accept or 'C' to cancel");
-                    break;
-            }
-        }
-    }
-
 }
