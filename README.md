@@ -1,7 +1,9 @@
-# Filep
+# Filep - File Encryption and Decryption CLI
 
-A simple Command Line Interface (CLI) program that enables parallel encryption and decryption of files using a password.
-This tool is designed to provide a straightforward and secure way to process directories with file encryption and decryption functionalities.
+**WARNING: PASSWORD IS UNRECOVERABLE; DO NOT FORGET IT. ENCRYPTED FILES WILL BE LOST IF YOU FORGET YOUR PASSWORD.**
+
+
+ This is a simple Command Line Interface (CLI) program designed for parallel encryption and decryption of files using a password. This tool provides a straightforward and secure way to process directories with file encryption and decryption functionalities.
 
 ## Table of Contents
 
@@ -19,7 +21,9 @@ This tool is designed to provide a straightforward and secure way to process dir
 - Parallel processing for efficient encryption and decryption of files.
 - Option to reset and remove the current password from the system.
 - Ability to encrypt, decrypt, or perform both actions on a specified directory.
-- Supports keeping the older files after decryption/encryption.
+- Supports keeping older files after decryption/encryption.
+- Argon2id key derivation.
+- Sequential encryption/decryption for better performance and lower memory usage.
 
 ## Getting Started
 
@@ -31,7 +35,10 @@ Ensure that you have the following prerequisites installed:
 
 ### Installation
 
-Download the executable from Releases tab and run it through the command line.
+1. Download latest executable from the [Releases](https://github.com/omegand/File-Protector/releases) tab.
+2. Run it through the command line.
+3. Optionally, set it in PATH to use it anywhere.
+
 
 ## Usage
 
@@ -62,13 +69,15 @@ Download the executable from Releases tab and run it through the command line.
     ```bash
     filep process -d exampleDirectory -p secretpass --de -s
     ```
-- Encrypt regular files and decrypt encrypted files in the "exampleDirectory" directory with the password "secretpass"
+
+- Encrypt regular files and decrypt encrypted files in the "exampleDirectory" directory with the password "secretpass":
 
     ```bash
     filep process -d exampleDirectory -p secretpass
     ```
+
 - Remove your password from the system. Be careful, TRYING TO DECRYPT FILES WITH A NEW PASSWORD WILL CORRUPT THEM...
 
     ```bash
-    filep process -d exampleDirectory -p secretpass
+    filep reset
     ```
