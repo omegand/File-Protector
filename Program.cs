@@ -13,15 +13,12 @@ public class Program
     }
 
     public static bool SafeMode { get; set; }
-    public static string CurrentPassword { get; set; }
     private static Cryptography Crypto { get; set; }
     private static Actions Action { get; set; } = Actions.Both;
 
     static void Main(string[] args)
     {
-        Parser.Default.ParseArguments<Options, Reset>(args)
-            .WithParsed<Options>(RunWithOptions)
-            .WithParsed<Reset>(_ => RunWithReset());
+        Parser.Default.ParseArguments<Options>(args).WithParsed(RunWithOptions);
     }
 
     private static void RunWithOptions(Options options)
@@ -32,21 +29,17 @@ public class Program
             return;
         }
         SetAction(options);
-        CurrentPassword = options.Password;
-        byte[] savedPassword = PasswordManager.GetPassword();
-        byte[]? aesKey = PasswordManager.VerifyPassword(CurrentPassword, savedPassword);
-
-        if (aesKey == null)
-        {
-            Console.WriteLine("Password does not match.");
-            return;
-        }
-
+        byte[] aesKey = KeyDerivation.DeriveKey(Utility.ToBytes(options.Password));
         byte[] IV = KeyDerivation.DeriveIV(aesKey);
         Crypto = new(aesKey, IV);
 
         Dictionary<bool, string[]> files = FileOperations.GetFiles(options.Directory);
-        Information info = new(files, Action);
+        Information info = new(files, Action, options.Password);
+
+        if (!ValidatePassword(files))
+        {
+            return;
+        }
 
         if (!Utility.ConfirmAction(info.ToString()))
         {
@@ -90,9 +83,7 @@ public class Program
         if (options.DecryptOnly) Action = Actions.Decrypt;
     }
 
-
-
-    //allFiles, true = encrypted files, false = regular
+    //true = encrypted files, false = regular
     private static void ProcessFiles(Dictionary<bool, string[]> allFiles)
     {
         switch (Action)
@@ -124,13 +115,20 @@ public class Program
             }
         });
     }
-    private static void RunWithReset()
+
+    private static bool ValidatePassword(Dictionary<bool, string[]> files)
     {
-        if (!Utility.ConfirmAction("You are about to delete your password, are you sure?"))
+        if (files[true].Length != 0)
         {
-            Environment.Exit(1);
-            return;
+            Console.WriteLine("Checking if password is valid...");
+            if (!Crypto.TestPassword(files[true][0]))
+            {
+                Console.WriteLine("Password is not valid, exiting.");
+                return false;
+            }
+            Console.WriteLine("Password is correct.");
         }
-        RegistryOperations.DeletePasswordFromRegistry();
+
+        return true;
     }
 }

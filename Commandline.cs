@@ -2,8 +2,6 @@
 
 namespace FileProtector;
 
-[Verb("process", isDefault: true, HelpText = "Process a directory")]
-
 internal class Options
 {
     [Option('d', "directory", Required = true, HelpText = "Directory to be processed.")]
@@ -21,8 +19,3 @@ internal class Options
     [Option('s', HelpText = "After decryption/encryption, will not delete previous older files.")]
     public bool SafeMode { get; set; }
 }
-[Verb("reset", HelpText = "Removes current password from system. Encrypted files will not be decrypted, be careful when using this.")]
-internal class Reset
-{
-}
-

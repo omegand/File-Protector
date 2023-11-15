@@ -3,7 +3,6 @@
     "Folder-Encrypter": {
       "commandName": "Project",
       "commandLineArgs": "",
-      // "commandLineArgs": "reset",
       "workingDirectory": "C:\\Users\\Omegand\\Desktop\\Folder-Encrypter"
     }
   }

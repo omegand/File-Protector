@@ -19,11 +19,11 @@ public class Cryptography
 
         try
         {
-            using (var encryptor = aes.CreateEncryptor())
+            using (ICryptoTransform encryptor = aes.CreateEncryptor())
             {
-                using var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-                using var outputStream = new FileStream(file + FileOperations.encryptionAppend, FileMode.Create, FileAccess.Write);
-                using var cryptoStream = new CryptoStream(outputStream, encryptor, CryptoStreamMode.Write);
+                using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+                using FileStream outputStream = new(file + FileOperations.encryptionAppend, FileMode.Create, FileAccess.Write);
+                using CryptoStream cryptoStream = new(outputStream, encryptor, CryptoStreamMode.Write);
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
 
@@ -47,10 +47,10 @@ public class Cryptography
 
         try
         {
-            using (var decryptor = aes.CreateDecryptor())
+            using (ICryptoTransform decryptor = aes.CreateDecryptor())
             {
-                using var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-                using var outputStream = new FileStream(Path.ChangeExtension(file, null), FileMode.Create, FileAccess.Write);
+                using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+                using FileStream outputStream = new(Path.ChangeExtension(file, null), FileMode.Create, FileAccess.Write);
                 using CryptoStream cryptoStream = new(outputStream, decryptor, CryptoStreamMode.Write);
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
@@ -67,5 +67,30 @@ public class Cryptography
             Console.WriteLine($"Failed to decrypt: {file} \nError: {ex}");
         }
     }
+
+    public bool TestPassword(string file)
+    {
+        if (!FileOperations.ValidateFile(file)) return false;
+
+        try
+        {
+            using ICryptoTransform decryptor = aes.CreateDecryptor();
+            using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+            using CryptoStream cryptoStream = new(inputStream, decryptor, CryptoStreamMode.Read);
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead;
+
+            while ((bytesRead = cryptoStream.Read(buffer, 0, bufferSize)) > 0)
+            {
+            }
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+
 
 }

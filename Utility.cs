@@ -1,4 +1,6 @@
-﻿namespace FileProtector;
+﻿using System.Text;
+
+namespace FileProtector;
 
 public class Utility
 {
@@ -60,5 +62,8 @@ public class Utility
         }
         return xor == 0;
     }
+
+
+    public static byte[] ToBytes(string str) => Encoding.UTF8.GetBytes(str);
 
 }

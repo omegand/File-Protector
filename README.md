@@ -12,14 +12,12 @@
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
-  - [Actions](#actions)
   - [Options](#options)
-- [Examples](#examples)
+  - [Examples](#examples)
 
 ## Features
 
 - Parallel processing for efficient encryption and decryption of files.
-- Option to reset and remove the current password from the system.
 - Ability to encrypt, decrypt, or perform both actions on a specified directory.
 - Supports keeping older files after decryption/encryption.
 - Argon2id key derivation.
@@ -42,11 +40,6 @@ Ensure that you have the following prerequisites installed:
 
 ## Usage
 
-### Actions
-
-- **process**: (Default) Process a directory.
-- **reset**: Removes the current password from the system. Encrypted files will not be decrypted; be careful when using this.
-
 ### Options
 
 - **-d, --directory**: Required. Directory to be processed.
@@ -56,28 +49,22 @@ Ensure that you have the following prerequisites installed:
 - **-s**: After decryption/encryption, will not delete previous older files.
 - **--help**: Display this help screen.
 
-## Examples
+### Examples
 
 - Encrypt files in the "exampleDirectory" directory with the password "secretpass":
 
     ```bash
-     filep process -d exampleDirectory -p secretpass --en
+     filep -d exampleDirectory -p secretpass --en
     ```
 
 - Decrypt files in the "exampleDirectory" directory with the password "secretpass" and keep older files:
 
     ```bash
-    filep process -d exampleDirectory -p secretpass --de -s
+    filep -d exampleDirectory -p secretpass --de -s
     ```
 
 - Encrypt regular files and decrypt encrypted files in the "exampleDirectory" directory with the password "secretpass":
 
     ```bash
-    filep process -d exampleDirectory -p secretpass
-    ```
-
-- Remove your password from the system. Be careful, TRYING TO DECRYPT FILES WITH A NEW PASSWORD WILL CORRUPT THEM...
-
-    ```bash
-    filep reset
+    filep -d exampleDirectory -p secretpass
     ```
