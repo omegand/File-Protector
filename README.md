@@ -62,7 +62,7 @@ Ensure that you have the following prerequisites installed:
     ```bash
     filep -d exampleDirectory -p secretpass --de -s
     ```
-- <b>Encrypt only</b>, using safe mode (keep old files).
+- <b>Encrypt only</b>.
 
     ```bash
     filep -d exampleDirectory -p secretpass --en
