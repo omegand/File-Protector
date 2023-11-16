@@ -47,24 +47,35 @@ Ensure that you have the following prerequisites installed:
 - **--en**: Will only encrypt.
 - **--de**: Will only decrypt.
 - **-s**: After decryption/encryption, will not delete previous older files.
+- **-l**: Limit the number of files processed. Negative numbers will return from the end.
 - **--help**: Display this help screen.
 
 ### Examples
 
-- Encrypt files in the "exampleDirectory" directory with the password "secretpass":
+- <b>Encrypt</b> files and <b>Decrypt</b> (encrypted) files in the "exampleDirectory" directory with the password "secretpass":
 
     ```bash
-     filep -d exampleDirectory -p secretpass --en
+     filep -d exampleDirectory -p secretpass
     ```
-
-- Decrypt files in the "exampleDirectory" directory with the password "secretpass" and keep older files:
+- <b>Decrypt only</b>, using <b>safe mode</b> (keep old files).
 
     ```bash
     filep -d exampleDirectory -p secretpass --de -s
     ```
-
-- Encrypt regular files and decrypt encrypted files in the "exampleDirectory" directory with the password "secretpass":
+- <b>Encrypt only</b>, using safe mode (keep old files).
 
     ```bash
-    filep -d exampleDirectory -p secretpass
+    filep -d exampleDirectory -p secretpass --en
     ```
+- Process the <b>first</b> 20 files
+
+    ```bash
+    filep -d exampleDirectory -p secretpass -l 20
+    ```
+- Process the <b>last</b> 20 files
+
+    ```bash
+    filep -d exampleDirectory -p secretpass -l -20
+    ```
+
+

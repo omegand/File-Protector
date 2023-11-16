@@ -18,4 +18,7 @@ internal class Options
 
     [Option('s', HelpText = "After decryption/encryption, will not delete previous older files.")]
     public bool SafeMode { get; set; }
+
+    [Option('l', HelpText = "Limit the number of files processed. Negative numbers will return from the end.")]
+    public int Limit { get; set; }
 }

@@ -9,6 +9,7 @@
     <StartupObject>FileProtector.Program</StartupObject>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <AssemblyName>filep</AssemblyName>
+    <Version>0.14</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

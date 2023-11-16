@@ -33,14 +33,14 @@ public class Program
         byte[] IV = KeyDerivation.DeriveIV(aesKey);
         Crypto = new(aesKey, IV);
 
-        Dictionary<bool, string[]> files = FileOperations.GetFiles(options.Directory);
-        Information info = new(files, Action, options.Password);
+        Dictionary<bool, string[]> files = FileOperations.GetFiles(options.Directory, options.Limit);
 
         if (!ValidatePassword(files))
         {
             return;
         }
 
+        Information info = new(files, Action, options.Password);
         if (!Utility.ConfirmAction(info.ToString()))
         {
             Environment.Exit(1);
