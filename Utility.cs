@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Security.Principal;
+using System.Text;
 
 namespace FileProtector;
 
@@ -63,7 +64,36 @@ public class Utility
         return xor == 0;
     }
 
+    public static string FirstCharToUpper(string input)
+    {
+        if (input == null || input == "")
+        {
+            Console.WriteLine("Cannot capitalize string as it's null or empty.");
+            return input;
+        }
+        return string.Concat(input[0].ToString().ToUpper(), input.AsSpan(1));
+    }
+    public static void VerifyWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Console.WriteLine("There's currently only Windows support for this action.");
+            Environment.Exit(1);
+        }
+    }
 
+    public static void VerifyAdmin()
+    {
+        WindowsIdentity windowsIdentity = WindowsIdentity.GetCurrent();
+        WindowsPrincipal windowsPrincipal = new WindowsPrincipal(windowsIdentity);
+
+        if (!windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
+        {
+            Console.WriteLine("You need to run the program as administrator to do this.");
+
+            Environment.Exit(1);
+        }
+    }
     public static byte[] ToBytes(string str) => Encoding.UTF8.GetBytes(str);
 
 }

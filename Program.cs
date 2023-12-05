@@ -18,7 +18,11 @@ public class Program
 
     static void Main(string[] args)
     {
-        Parser.Default.ParseArguments<Options>(args).WithParsed(RunWithOptions);
+        var parserResult = Parser.Default.ParseArguments<Options, ToggleContextMenu>(args);
+        parserResult.WithParsed<Options>(RunWithOptions)
+                    .WithParsed<ToggleContextMenu>(ctx => ContextMenuOperations.ToggleContextMenu());
+        Console.WriteLine("Press any key to close...");
+        Console.ReadKey();
     }
 
     private static void RunWithOptions(Options options)
@@ -72,6 +76,12 @@ public class Program
         {
             SafeMode = options.SafeMode;
             Console.WriteLine("Running in safe mode.");
+        }
+        while (string.IsNullOrEmpty(options.Password))
+        {
+            Console.WriteLine("Password not found.");
+            Console.WriteLine("Enter password:");
+            options.Password = Console.ReadLine();
         }
 
         return true;
@@ -131,4 +141,5 @@ public class Program
 
         return true;
     }
+
 }

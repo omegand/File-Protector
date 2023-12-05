@@ -9,7 +9,8 @@
     <StartupObject>FileProtector.Program</StartupObject>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <AssemblyName>filep</AssemblyName>
-    <Version>0.14</Version>
+    <Version>0.15</Version>
+    <ApplicationIcon>icon 2.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,6 +24,10 @@
     <NoWarn />
     <DebugType>full</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="icon 2.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
