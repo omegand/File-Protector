@@ -59,7 +59,8 @@ internal class ContextMenuOperations
 
     private static void RegisterContextMenuCommand(string command, string arguments)
     {
-        using RegistryKey key = Registry.LocalMachine.CreateSubKey(CommandStorePath + $"{AssemblyName}.{command}");
+        using RegistryKey baseReg = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        using RegistryKey key = baseReg.CreateSubKey(CommandStorePath + $"{AssemblyName}.{command}");
         key.SetValue(null, Utility.FirstCharToUpper(command));
         using var commandKey = key.CreateSubKey("command");
         commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
