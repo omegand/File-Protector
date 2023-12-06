@@ -43,6 +43,7 @@ internal class ContextMenuOperations
             {
                 key.SetValue("MUIVerb", MenuName);
                 key.SetValue("SubCommands", $"{AssemblyName}.encrypt;{AssemblyName}.decrypt");
+                key.SetValue("Icon", ProgramPath);
             }
 
             RegisterContextMenuCommand("encrypt", "--en -d \"%1\"");
