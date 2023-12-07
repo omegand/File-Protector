@@ -15,34 +15,31 @@ public class Program
     public static bool SafeMode { get; set; }
     private static Cryptography Crypto { get; set; }
     private static Actions Action { get; set; } = Actions.Both;
+    private static Dictionary<bool, string[]> files = new();
 
     static void Main(string[] args)
     {
-        var parserResult = Parser.Default.ParseArguments<Options, ToggleContextMenu>(args);
+        var parserResult = Parser.Default.ParseArguments<Options, ToggleContextMenu, Server>(args);
         parserResult.WithParsed<Options>(RunWithOptions)
-                    .WithParsed<ToggleContextMenu>(ctx => ContextMenuOperations.ToggleContextMenu());
+                    .WithParsed<ToggleContextMenu>(ctx => ContextMenuOperations.ToggleContextMenu())
+                    .WithParsed<Server>(ServerClientOperations.ServerLoop);
         Console.WriteLine("Press any key to close...");
         Console.ReadKey();
+        return;
     }
 
     private static void RunWithOptions(Options options)
     {
         Console.WriteLine("Do not exit the program until it's done, as it might corrupt your files.");
+        files = FileOperations.GetFiles(options.Directory, options.Limit);
+
         if (!ValidateOptions(options))
         {
             return;
         }
-        SetAction(options);
-        byte[] aesKey = KeyDerivation.DeriveKey(Utility.ToBytes(options.Password));
-        byte[] IV = KeyDerivation.DeriveIV(aesKey);
+
+        var (IV, aesKey) = Cryptography.GetKeys(options.Password);
         Crypto = new(aesKey, IV);
-
-        Dictionary<bool, string[]> files = FileOperations.GetFiles(options.Directory, options.Limit);
-
-        if (!ValidatePassword(files))
-        {
-            return;
-        }
 
         Information info = new(files, Action, options.Password);
         if (!Utility.ConfirmAction(info.ToString()))
@@ -58,6 +55,7 @@ public class Program
         Console.WriteLine("Peak Memory Usage: " + (Process.GetCurrentProcess().PeakWorkingSet64 / (1024 * 1024)) + " MB");
         Console.WriteLine("Done.");
     }
+
     private static bool ValidateOptions(Options options)
     {
         if (options.EncryptOnly && options.DecryptOnly)
@@ -65,6 +63,7 @@ public class Program
             Console.WriteLine("Only specify -e or -d, not both.");
             return false;
         }
+        SetAction(options);
 
         if (!Directory.Exists(options.Directory))
         {
@@ -77,14 +76,45 @@ public class Program
             SafeMode = options.SafeMode;
             Console.WriteLine("Running in safe mode.");
         }
-        while (string.IsNullOrEmpty(options.Password))
+
+        PasswordCheck(options);
+
+        while (!PasswordIsValid(options.Password))
         {
-            Console.WriteLine("Password not found.");
-            Console.WriteLine("Enter password:");
-            options.Password = Console.ReadLine();
+            options.Password = "";
+            PasswordCheck(options, false);
         }
 
+        ServerClientOperations.StartServer(options.Password);
         return true;
+    }
+
+    private static void PasswordCheck(Options options, bool checkServer = true)
+    {
+        if (string.IsNullOrWhiteSpace(options.Password))
+        {
+            string password = "";
+
+            if (checkServer)
+                password = ServerClientOperations.GetPasswordFromServer();
+
+            if (password == "")
+            {
+                Console.WriteLine("Password server doesn't exist or is incorrect.");
+                password = InputPassword();
+            }
+            options.Password = password;
+        }
+    }
+
+    private static string InputPassword()
+    {
+        string password = "";
+        while (string.IsNullOrWhiteSpace(password))
+        {
+            password = Utility.GetInput("Enter your password:");
+        }
+        return password;
     }
 
     private static void SetAction(Options options)
@@ -126,14 +156,14 @@ public class Program
         });
     }
 
-    private static bool ValidatePassword(Dictionary<bool, string[]> files)
+    private static bool PasswordIsValid(string password)
     {
         if (files[true].Length != 0)
         {
             Console.WriteLine("Checking if password is valid...");
-            if (!Crypto.TestPassword(files[true][0]))
+            if (!Cryptography.TestDecryption(files[true][0], password))
             {
-                Console.WriteLine("Password is not valid, exiting.");
+                Console.WriteLine("Password is not valid.");
                 return false;
             }
             Console.WriteLine("Password is correct.");

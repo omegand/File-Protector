@@ -27,3 +27,10 @@ internal class Options
 internal class ToggleContextMenu
 {
 }
+
+[Verb("server", Hidden = true, HelpText = "For internal use. Do not call this.")]
+internal class Server
+{
+    [Option('p', Hidden = true)]
+    public required string Password { get; set; }
+}

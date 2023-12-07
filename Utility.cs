@@ -18,7 +18,7 @@ public class Utility
         Console.Write(prompt);
         string? input = Console.ReadLine();
 
-        if (string.IsNullOrEmpty(input))
+        if (string.IsNullOrWhiteSpace(input))
         {
             Console.WriteLine("\nProblem with input, try again.");
             return GetInput(prompt);

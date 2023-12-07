@@ -68,13 +68,15 @@ public class Cryptography
         }
     }
 
-    public bool TestPassword(string file)
+    public static bool TestDecryption(string file, string password)
     {
         if (!FileOperations.ValidateFile(file)) return false;
 
         try
         {
-            using ICryptoTransform decryptor = aes.CreateDecryptor();
+            Aes aes = Aes.Create();
+            var (IV, aesKey) = GetKeys(password);
+            using ICryptoTransform decryptor = aes.CreateDecryptor(aesKey, IV);
             using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
             using CryptoStream cryptoStream = new(inputStream, decryptor, CryptoStreamMode.Read);
             byte[] buffer = new byte[bufferSize];
@@ -91,6 +93,10 @@ public class Cryptography
         }
     }
 
-
-
+    public static (byte[] IV, byte[] Key) GetKeys(string password)
+    {
+        byte[] aesKey = KeyDerivation.DeriveKey(Utility.ToBytes(password));
+        byte[] IV = KeyDerivation.DeriveIV(aesKey);
+        return (IV, aesKey);
+    }
 }
