@@ -16,23 +16,28 @@ public class FileOperations
     /// <param name="path">The directory path to search for files.</param>
     /// <param name="limit">The maximum number of files to retrieve. Use 0 for no limit, a positive value for a limit from the start, and a negative value for a limit from the end.</param>
     /// <returns>A dictionary where the key represents whether the files are encrypted (true) or not (false), and the value is an array of corresponding file paths.</returns>
-    public static Dictionary<bool, string[]> GetFiles(string path, int limit)
+    public static Dictionary<bool, string[]> GetFiles(string path, int limit, Actions action)
     {
         string[] allFiles = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
 
-        if (limit > 0) allFiles = allFiles.Take(limit).ToArray();
-        if (limit < 0) allFiles = allFiles.TakeLast(-limit).ToArray();
+        if (limit != 0)
+        {
+            allFiles = (limit > 0) ? allFiles.Take(limit).ToArray() : allFiles.TakeLast(Math.Abs(limit)).ToArray();
+        }
 
-        string[] encryptedFiles = allFiles
-            .Where(file => file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        string[] nonEncryptedFiles = allFiles
-            .Where(file => !file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-        return new Dictionary<bool, string[]> { { true, encryptedFiles }, { false, nonEncryptedFiles } };
+        return action switch
+        {
+            Actions.Encrypt => new Dictionary<bool, string[]> { [true] = Array.Empty<string>(), [false] = GetRegularFiles(allFiles) },
+            Actions.Decrypt => new Dictionary<bool, string[]> { [true] = GetEncryptedFiles(allFiles), [false] = Array.Empty<string>() },
+            Actions.Both => new Dictionary<bool, string[]>
+            {
+                [true] = GetEncryptedFiles(allFiles),
+                [false] = GetRegularFiles(allFiles)
+            },
+            _ => throw new Exception("Problem with action argument.")
+        };
     }
+
 
     public static bool ValidateFile(string file)
     {
@@ -43,5 +48,19 @@ public class FileOperations
         }
         return true;
     }
+
+    public static bool Empty(Dictionary<bool, string[]> files)
+    {
+        if (files[true].Length > 0 || files[false].Length > 0)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    private static string[] GetEncryptedFiles(string[] allFiles) => allFiles.Where(file => file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
+    private static string[] GetRegularFiles(string[] allFiles) => allFiles.Where(file => !file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
 
 }

@@ -2,19 +2,24 @@
 using System.Diagnostics;
 
 namespace FileProtector;
+//Error codes:
+//9 - Problem with arguments
+//6 - User based exit  
+//3 - No files found
+//4 - Problem with OS permissions
+//5 - Unsupported OS
+public enum Actions
+{
+    Encrypt,
+    Decrypt,
+    Both
+}
 
 public class Program
 {
-    public enum Actions
-    {
-        Encrypt,
-        Decrypt,
-        Both
-    }
-
-    public static bool SafeMode { get; set; }
-    private static Cryptography Crypto { get; set; }
-    private static Actions Action { get; set; } = Actions.Both;
+    public static bool SafeMode;
+    private static Cryptography Crypto;
+    private static Actions Action = Actions.Both;
     private static Dictionary<bool, string[]> files = new();
 
     static void Main(string[] args)
@@ -31,21 +36,18 @@ public class Program
     private static void RunWithOptions(Options options)
     {
         Console.WriteLine("Do not exit the program until it's done, as it might corrupt your files.");
-        files = FileOperations.GetFiles(options.Directory, options.Limit);
-
-        if (!ValidateOptions(options))
-        {
-            return;
-        }
+        CheckArguments(options);
+        CheckFiles(options);
+        CheckPasswordArgument(options);
+        ServerClientOperations.StartServer(options.Password);
 
         var (IV, aesKey) = Cryptography.GetKeys(options.Password);
         Crypto = new(aesKey, IV);
 
-        Information info = new(files, Action, options.Password);
+        Information info = new(files, options.Password);
         if (!Utility.ConfirmAction(info.ToString()))
         {
-            Environment.Exit(1);
-            return;
+            Utility.ExitWithInput(6);
         }
 
         Stopwatch sw = Stopwatch.StartNew();
@@ -56,19 +58,42 @@ public class Program
         Console.WriteLine("Done.");
     }
 
-    private static bool ValidateOptions(Options options)
+    private static void CheckFiles(Options options)
+    {
+        files = FileOperations.GetFiles(options.Directory, options.Limit, Action);
+        if (FileOperations.Empty(files))
+        {
+            Console.WriteLine("Did not find any files.");
+            Utility.ExitWithInput(3);
+        }
+    }
+
+    private static void CheckPasswordArgument(Options options)
+    {
+        TryGetPassword(options);
+
+        while (!PasswordIsValid(options.Password))
+        {
+            options.Password = "";
+            TryGetPassword(options, false);
+        }
+    }
+
+    private static void CheckArguments(Options options)
     {
         if (options.EncryptOnly && options.DecryptOnly)
         {
             Console.WriteLine("Only specify -e or -d, not both.");
-            return false;
+            Utility.ExitWithInput(9);
         }
-        SetAction(options);
+
+        if (options.EncryptOnly) Action = Actions.Encrypt;
+        if (options.DecryptOnly) Action = Actions.Decrypt;
 
         if (!Directory.Exists(options.Directory))
         {
             Console.WriteLine($"Argument: {options.Directory} isn't a directory or doesn't exist, try again.");
-            return false;
+            Utility.ExitWithInput(9);
         }
 
         if (options.SafeMode)
@@ -76,20 +101,9 @@ public class Program
             SafeMode = options.SafeMode;
             Console.WriteLine("Running in safe mode.");
         }
-
-        PasswordCheck(options);
-
-        while (!PasswordIsValid(options.Password))
-        {
-            options.Password = "";
-            PasswordCheck(options, false);
-        }
-
-        ServerClientOperations.StartServer(options.Password);
-        return true;
     }
 
-    private static void PasswordCheck(Options options, bool checkServer = true)
+    private static void TryGetPassword(Options options, bool checkServer = true)
     {
         if (string.IsNullOrWhiteSpace(options.Password))
         {
@@ -117,48 +131,30 @@ public class Program
         return password;
     }
 
-    private static void SetAction(Options options)
-    {
-        if (options.EncryptOnly) Action = Actions.Encrypt;
-        if (options.DecryptOnly) Action = Actions.Decrypt;
-    }
-
     //true = encrypted files, false = regular
     private static void ProcessFiles(Dictionary<bool, string[]> allFiles)
     {
-        switch (Action)
+        if (allFiles.TryGetValue(true, out var encryptedFiles))
         {
-            case Actions.Encrypt:
-                ParallelAction(allFiles[false]);
-                break;
-            case Actions.Decrypt:
-                ParallelAction(allFiles[true], true);
-                break;
-            case Actions.Both:
-                ParallelAction(allFiles[false]);
-                ParallelAction(allFiles[true], true);
-                break;
+            ParallelProcessFiles(encryptedFiles, Crypto.Decrypt);
+        }
+        if (allFiles.TryGetValue(false, out var regularFiles))
+        {
+            ParallelProcessFiles(regularFiles, Crypto.Encrypt);
         }
     }
 
-    private static void ParallelAction(string[] files, bool encrypted = false)
+    private static void ParallelProcessFiles(string[] files, Action<string> fileProcessingAction)
     {
         Parallel.ForEach(files, file =>
         {
-            if (encrypted)
-            {
-                Crypto.Decrypt(file);
-            }
-            else
-            {
-                Crypto.Encrypt(file);
-            }
+            fileProcessingAction(file);
         });
     }
 
     private static bool PasswordIsValid(string password)
     {
-        if (files[true].Length != 0)
+        if (files.ContainsKey(true) && files[true].Length > 0)
         {
             Console.WriteLine("Checking if password is valid...");
             if (!Cryptography.TestDecryption(files[true][0], password))

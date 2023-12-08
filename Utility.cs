@@ -78,21 +78,28 @@ public class Utility
         if (!OperatingSystem.IsWindows())
         {
             Console.WriteLine("There's currently only Windows support for this action.");
-            Environment.Exit(1);
+            ExitWithInput(5);
         }
     }
 
     public static void VerifyAdmin()
     {
         WindowsIdentity windowsIdentity = WindowsIdentity.GetCurrent();
-        WindowsPrincipal windowsPrincipal = new WindowsPrincipal(windowsIdentity);
+        WindowsPrincipal windowsPrincipal = new(windowsIdentity);
 
         if (!windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
         {
             Console.WriteLine("You need to run the program as administrator to do this.");
 
-            Environment.Exit(1);
+            ExitWithInput(4);
         }
+    }
+
+    public static void ExitWithInput(int code)
+    {
+        Console.WriteLine("Press any key to exit...");
+        Console.ReadKey();
+        Environment.Exit(code);
     }
     public static byte[] ToBytes(string str) => Encoding.UTF8.GetBytes(str);
 
