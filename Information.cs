@@ -18,7 +18,7 @@ public readonly struct Information
     public override string ToString()
     {
         StringBuilder sb = new();
-        sb.AppendLine($"Using the password: '{Password}'")
+        _ = sb.AppendLine($"Using the password: '{Password}'")
           .AppendLine("You are about to process the following actions:")
           .AppendLine($"\t- Encrypting {EncryptCount} file(s)")
           .AppendLine($"\t- Decrypting {DecryptCount} file(s)");

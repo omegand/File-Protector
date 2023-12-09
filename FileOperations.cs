@@ -6,7 +6,11 @@ public class FileOperations
 
     public static void Delete(string path)
     {
-        if (Program.SafeMode) return;
+        if (Program.SafeMode)
+        {
+            return;
+        }
+
         File.Delete(path);
     }
 
@@ -51,16 +55,15 @@ public class FileOperations
 
     public static bool Empty(Dictionary<bool, string[]> files)
     {
-        if (files[true].Length > 0 || files[false].Length > 0)
-        {
-            return false;
-        }
-        else
-        {
-            return true;
-        }
+        return files[true].Length == 0 && files[false].Length == 0;
     }
-    private static string[] GetEncryptedFiles(string[] allFiles) => allFiles.Where(file => file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
-    private static string[] GetRegularFiles(string[] allFiles) => allFiles.Where(file => !file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
+    private static string[] GetEncryptedFiles(string[] allFiles)
+    {
+        return allFiles.Where(file => file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
 
+    private static string[] GetRegularFiles(string[] allFiles)
+    {
+        return allFiles.Where(file => !file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
 }

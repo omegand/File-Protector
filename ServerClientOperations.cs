@@ -4,8 +4,8 @@ using System.IO.Pipes;
 namespace FileProtector;
 internal class ServerClientOperations
 {
-    const string PipeName = "8b9c4777e1b15385f086b5c";
-    const int TimeOut = 100;
+    private const string PipeName = "8b9c4777e1b15385f086b5c";
+    private const int TimeOut = 100;
 
     public static void StartServer(string password)
     {
@@ -27,7 +27,7 @@ internal class ServerClientOperations
             {
                 StartInfo = startInfo
             };
-            process.Start();
+            _ = process.Start();
         }
         catch (Exception)
         {
@@ -40,16 +40,12 @@ internal class ServerClientOperations
     {
         while (true)
         {
-            using (NamedPipeServerStream server = new(PipeName))
-            {
-                server.WaitForConnection();
+            using NamedPipeServerStream server = new(PipeName);
+            server.WaitForConnection();
 
-                using (StreamWriter writer = new(server))
-                {
-                    writer.WriteLine(data.Password);
-                    writer.Flush();
-                }
-            }
+            using StreamWriter writer = new(server);
+            writer.WriteLine(data.Password);
+            writer.Flush();
         }
     }
 
@@ -62,10 +58,8 @@ internal class ServerClientOperations
             {
                 client.Connect(TimeOut);
 
-                using (StreamReader reader = new(client))
-                {
-                    data = reader.ReadLine();
-                }
+                using StreamReader reader = new(client);
+                data = reader.ReadLine();
             }
             return data;
         }

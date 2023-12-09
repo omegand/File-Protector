@@ -66,7 +66,7 @@ public class Utility
 
     public static string FirstCharToUpper(string input)
     {
-        if (input == null || input == "")
+        if (input is null or "")
         {
             Console.WriteLine("Cannot capitalize string as it's null or empty.");
             return input;
@@ -98,9 +98,11 @@ public class Utility
     public static void ExitWithInput(int code)
     {
         Console.WriteLine("Press any key to exit...");
-        Console.ReadKey();
+        _ = Console.ReadKey();
         Environment.Exit(code);
     }
-    public static byte[] ToBytes(string str) => Encoding.UTF8.GetBytes(str);
-
+    public static byte[] ToBytes(string str)
+    {
+        return Encoding.UTF8.GetBytes(str);
+    }
 }

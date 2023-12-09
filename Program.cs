@@ -18,18 +18,18 @@ public enum Actions
 public class Program
 {
     public static bool SafeMode;
-    private static Cryptography Crypto;
+    private static Cryptography? Crypto;
     private static Actions Action = Actions.Both;
     private static Dictionary<bool, string[]> files = new();
 
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
-        var parserResult = Parser.Default.ParseArguments<Options, ToggleContextMenu, Server>(args);
-        parserResult.WithParsed<Options>(RunWithOptions)
+        ParserResult<object> parserResult = Parser.Default.ParseArguments<Options, ToggleContextMenu, Server>(args);
+        _ = parserResult.WithParsed<Options>(RunWithOptions)
                     .WithParsed<ToggleContextMenu>(ctx => ContextMenuOperations.ToggleContextMenu())
                     .WithParsed<Server>(ServerClientOperations.ServerLoop);
         Console.WriteLine("Press any key to close...");
-        Console.ReadKey();
+        _ = Console.ReadKey();
         return;
     }
 
@@ -41,7 +41,7 @@ public class Program
         CheckPasswordArgument(options);
         ServerClientOperations.StartServer(options.Password);
 
-        var (IV, aesKey) = Cryptography.GetKeys(options.Password);
+        (byte[] IV, byte[] aesKey) = Cryptography.GetKeys(options.Password);
         Crypto = new(aesKey, IV);
 
         Information info = new(files, options.Password);
@@ -87,8 +87,15 @@ public class Program
             Utility.ExitWithInput(9);
         }
 
-        if (options.EncryptOnly) Action = Actions.Encrypt;
-        if (options.DecryptOnly) Action = Actions.Decrypt;
+        if (options.EncryptOnly)
+        {
+            Action = Actions.Encrypt;
+        }
+
+        if (options.DecryptOnly)
+        {
+            Action = Actions.Decrypt;
+        }
 
         if (!Directory.Exists(options.Directory))
         {
@@ -110,7 +117,9 @@ public class Program
             string password = "";
 
             if (checkServer)
+            {
                 password = ServerClientOperations.GetPasswordFromServer();
+            }
 
             if (password == "")
             {
@@ -134,11 +143,11 @@ public class Program
     //true = encrypted files, false = regular
     private static void ProcessFiles(Dictionary<bool, string[]> allFiles)
     {
-        if (allFiles.TryGetValue(true, out var encryptedFiles))
+        if (allFiles.TryGetValue(true, out string[]? encryptedFiles))
         {
             ParallelProcessFiles(encryptedFiles, Crypto.Decrypt);
         }
-        if (allFiles.TryGetValue(false, out var regularFiles))
+        if (allFiles.TryGetValue(false, out string[]? regularFiles))
         {
             ParallelProcessFiles(regularFiles, Crypto.Encrypt);
         }
@@ -146,7 +155,7 @@ public class Program
 
     private static void ParallelProcessFiles(string[] files, Action<string> fileProcessingAction)
     {
-        Parallel.ForEach(files, file =>
+        _ = Parallel.ForEach(files, file =>
         {
             fileProcessingAction(file);
         });

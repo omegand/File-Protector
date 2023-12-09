@@ -64,6 +64,8 @@ public class KeyDerivation
         return maxMemoryUsage / 1024;
     }
 
-    public static byte[] ToBytes(string input) => Encoding.ASCII.GetBytes(input);
-
+    public static byte[] ToBytes(string input)
+    {
+        return Encoding.ASCII.GetBytes(input);
+    }
 }

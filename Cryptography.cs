@@ -15,7 +15,10 @@ public class Cryptography
 
     public void Encrypt(string file)
     {
-        if (!FileOperations.ValidateFile(file)) return;
+        if (!FileOperations.ValidateFile(file))
+        {
+            return;
+        }
 
         try
         {
@@ -43,7 +46,10 @@ public class Cryptography
 
     public void Decrypt(string file)
     {
-        if (!FileOperations.ValidateFile(file)) return;
+        if (!FileOperations.ValidateFile(file))
+        {
+            return;
+        }
 
         try
         {
@@ -70,12 +76,15 @@ public class Cryptography
 
     public static bool TestDecryption(string file, string password)
     {
-        if (!FileOperations.ValidateFile(file)) return false;
+        if (!FileOperations.ValidateFile(file))
+        {
+            return false;
+        }
 
         try
         {
             Aes aes = Aes.Create();
-            var (IV, aesKey) = GetKeys(password);
+            (byte[] IV, byte[] aesKey) = GetKeys(password);
             using ICryptoTransform decryptor = aes.CreateDecryptor(aesKey, IV);
             using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
             using CryptoStream cryptoStream = new(inputStream, decryptor, CryptoStreamMode.Read);

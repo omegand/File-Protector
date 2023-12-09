@@ -8,16 +8,16 @@ internal class ContextMenuOperations
     private const string MenuName = "File Protector";
     private const string CommandStorePath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\";
 
-    private static string DirectoryShellPath = @"Directory\shell\";
-    private static string ProgramPath;
-    private static string AssemblyName;
+    private static readonly string DirectoryShellPath = @"Directory\shell\";
+    private static readonly string ProgramPath;
+    private static readonly string AssemblyName;
 
     static ContextMenuOperations()
     {
         Utility.VerifyWindows();
         Utility.VerifyAdmin();
 
-        var exePath = Process.GetCurrentProcess().MainModule;
+        ProcessModule? exePath = Process.GetCurrentProcess().MainModule;
         ProgramPath = exePath.FileName;
         AssemblyName = exePath.ModuleName[..^4];
         DirectoryShellPath += AssemblyName;
@@ -62,7 +62,7 @@ internal class ContextMenuOperations
         using RegistryKey baseReg = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
         using RegistryKey key = baseReg.CreateSubKey(CommandStorePath + $"{AssemblyName}.{command}");
         key.SetValue(null, Utility.FirstCharToUpper(command));
-        using var commandKey = key.CreateSubKey("command");
+        using RegistryKey commandKey = key.CreateSubKey("command");
         commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
     }
 
