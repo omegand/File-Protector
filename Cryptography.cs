@@ -22,10 +22,12 @@ public class Cryptography
 
         try
         {
-            using (ICryptoTransform encryptor = aes.CreateEncryptor())
+            string newFile = file + FileOperations.encryptionAppend;
+
+            using ICryptoTransform encryptor = aes.CreateEncryptor();
             {
                 using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-                using FileStream outputStream = new(file + FileOperations.encryptionAppend, FileMode.Create, FileAccess.Write);
+                using FileStream outputStream = new(newFile, FileMode.Create, FileAccess.Write);
                 using CryptoStream cryptoStream = new(outputStream, encryptor, CryptoStreamMode.Write);
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
@@ -35,8 +37,9 @@ public class Cryptography
                     cryptoStream.Write(buffer, 0, bytesRead);
                 }
             }
-            FileOperations.Delete(file);
 
+            FileOperations.SetFileDates(newFile, file);
+            FileOperations.Delete(file);
         }
         catch (Exception ex)
         {
@@ -53,10 +56,12 @@ public class Cryptography
 
         try
         {
+            string newFile = Path.ChangeExtension(file, null);
+
             using (ICryptoTransform decryptor = aes.CreateDecryptor())
             {
                 using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-                using FileStream outputStream = new(Path.ChangeExtension(file, null), FileMode.Create, FileAccess.Write);
+                using FileStream outputStream = new(newFile, FileMode.Create, FileAccess.Write);
                 using CryptoStream cryptoStream = new(outputStream, decryptor, CryptoStreamMode.Write);
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
@@ -66,6 +71,8 @@ public class Cryptography
                     cryptoStream.Write(buffer, 0, bytesRead);
                 }
             }
+
+            FileOperations.SetFileDates(newFile, file);
             FileOperations.Delete(file);
         }
         catch (Exception ex)

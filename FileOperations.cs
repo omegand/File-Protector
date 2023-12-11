@@ -53,6 +53,19 @@ public class FileOperations
         return true;
     }
 
+    public static void SetFileDates(string newFile, string oldFile)
+    {
+        try
+        {
+            File.SetCreationTimeUtc(newFile, File.GetCreationTimeUtc(oldFile));
+            File.SetLastWriteTimeUtc(newFile, File.GetLastWriteTimeUtc(oldFile));
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("A problem occured trying to set file dates, skipping.");
+        }
+    }
+
     public static bool Empty(Dictionary<bool, string[]> files)
     {
         return files[true].Length == 0 && files[false].Length == 0;
