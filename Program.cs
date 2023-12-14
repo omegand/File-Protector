@@ -63,7 +63,7 @@ public class Program
         files = FileOperations.GetFiles(options.Directory, options.Limit, Action);
         if (FileOperations.Empty(files))
         {
-            Console.WriteLine("Did not find any files.");
+            Console.WriteLine($"Did not find any files.\n{options.Directory}");
             Utility.ExitWithInput(3);
         }
     }

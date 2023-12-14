@@ -24,7 +24,7 @@ public class Cryptography
         {
             string newFile = file + FileOperations.encryptionAppend;
 
-            using ICryptoTransform encryptor = aes.CreateEncryptor();
+            using (ICryptoTransform encryptor = aes.CreateEncryptor())
             {
                 using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
                 using FileStream outputStream = new(newFile, FileMode.Create, FileAccess.Write);
@@ -37,7 +37,6 @@ public class Cryptography
                     cryptoStream.Write(buffer, 0, bytesRead);
                 }
             }
-
             FileOperations.SetFileDates(newFile, file);
             FileOperations.Delete(file);
         }

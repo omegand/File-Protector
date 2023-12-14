@@ -24,24 +24,43 @@ public class FileOperations
     {
         string[] allFiles = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
 
-        if (limit != 0)
-        {
-            allFiles = (limit > 0) ? allFiles.Take(limit).ToArray() : allFiles.TakeLast(Math.Abs(limit)).ToArray();
-        }
-
         return action switch
         {
-            Actions.Encrypt => new Dictionary<bool, string[]> { [true] = Array.Empty<string>(), [false] = GetRegularFiles(allFiles) },
-            Actions.Decrypt => new Dictionary<bool, string[]> { [true] = GetEncryptedFiles(allFiles), [false] = Array.Empty<string>() },
+            Actions.Encrypt => new Dictionary<bool, string[]>
+            {
+                [true] = Array.Empty<string>(),
+                [false] = GetRegularFiles(allFiles, limit)
+            },
+            Actions.Decrypt => new Dictionary<bool, string[]>
+            {
+                [true] = GetEncryptedFiles(allFiles, limit),
+                [false] = Array.Empty<string>()
+            },
             Actions.Both => new Dictionary<bool, string[]>
             {
-                [true] = GetEncryptedFiles(allFiles),
-                [false] = GetRegularFiles(allFiles)
+                [true] = GetEncryptedFiles(allFiles, limit),
+                [false] = GetRegularFiles(allFiles, limit)
             },
-            _ => throw new Exception("Problem with action argument.")
+            _ => throw new ArgumentException("Invalid action argument.")
         };
     }
 
+    private static string[] GetEncryptedFiles(string[] allFiles, int limit)
+    {
+        string[] encryptedFiles = allFiles.Where(file => file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
+        return ApplyLimit(encryptedFiles, limit);
+    }
+
+    private static string[] GetRegularFiles(string[] allFiles, int limit)
+    {
+        string[] regularFiles = allFiles.Where(file => !file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
+        return ApplyLimit(regularFiles, limit);
+    }
+
+    private static string[] ApplyLimit(string[] files, int limit)
+    {
+        return limit != 0 ? (limit > 0) ? files.Take(limit).ToArray() : files.TakeLast(Math.Abs(limit)).ToArray() : files;
+    }
 
     public static bool ValidateFile(string file)
     {
@@ -70,13 +89,5 @@ public class FileOperations
     {
         return files[true].Length == 0 && files[false].Length == 0;
     }
-    private static string[] GetEncryptedFiles(string[] allFiles)
-    {
-        return allFiles.Where(file => file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
-    }
 
-    private static string[] GetRegularFiles(string[] allFiles)
-    {
-        return allFiles.Where(file => !file.EndsWith(encryptionAppend, StringComparison.OrdinalIgnoreCase)).ToArray();
-    }
 }
