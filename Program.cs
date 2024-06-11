@@ -18,6 +18,7 @@ public enum Actions
 public class Program
 {
     public static bool SafeMode;
+    public static bool IgnoreNames;
     private static Cryptography? Crypto;
     private static Actions Action = Actions.Both;
     private static Dictionary<bool, string[]> files = new();
@@ -108,6 +109,12 @@ public class Program
             SafeMode = options.SafeMode;
             Console.WriteLine("Running in safe mode.");
         }
+
+        if (options.IgnoreNames)
+        {
+            IgnoreNames = options.IgnoreNames;
+            Console.WriteLine("Ignoring file names during encryption.");
+        }
     }
 
     private static void TryGetPassword(Options options, bool checkServer = true)
@@ -145,11 +152,11 @@ public class Program
     {
         if (allFiles.TryGetValue(true, out string[]? encryptedFiles))
         {
-            ParallelProcessFiles(encryptedFiles, Crypto.Decrypt);
+            ParallelProcessFiles(encryptedFiles, Crypto.DecryptFile);
         }
         if (allFiles.TryGetValue(false, out string[]? regularFiles))
         {
-            ParallelProcessFiles(regularFiles, Crypto.Encrypt);
+            ParallelProcessFiles(regularFiles, Crypto.EncryptFile);
         }
     }
 

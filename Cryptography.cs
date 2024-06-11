@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Text;
 
 namespace FileProtector;
 
@@ -13,21 +14,29 @@ public class Cryptography
         aes.Key = aesKey;
     }
 
-    public void Encrypt(string file)
+    public void EncryptFile(string filePath)
     {
-        if (!FileOperations.ValidateFile(file))
+        if (!FileOperations.ValidateFile(filePath))
         {
             return;
         }
 
         try
         {
-            string newFile = file + FileOperations.encryptionAppend;
+
+            string fileName = Path.GetFileName(filePath);
+            string encryptedName = FileOperations.FixFaultyFileName(EncryptFileName(fileName, aes)) + FileOperations.encryptionAppend;
+            string newFilePath = Path.Combine(Path.GetDirectoryName(filePath), encryptedName);
+
+            if (Program.IgnoreNames)
+            {
+                newFilePath = filePath + FileOperations.encryptionAppend;
+            }
 
             using (ICryptoTransform encryptor = aes.CreateEncryptor())
             {
-                using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-                using FileStream outputStream = new(newFile, FileMode.Create, FileAccess.Write);
+                using FileStream inputStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+                using FileStream outputStream = new(newFilePath, FileMode.Create, FileAccess.Write);
                 using CryptoStream cryptoStream = new(outputStream, encryptor, CryptoStreamMode.Write);
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
@@ -37,30 +46,39 @@ public class Cryptography
                     cryptoStream.Write(buffer, 0, bytesRead);
                 }
             }
-            FileOperations.SetFileDates(newFile, file);
-            FileOperations.Delete(file);
+
+            FileOperations.SetFileDates(newFilePath, filePath);
+            FileOperations.Delete(filePath);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to encrypt: {file} \nError: {ex}");
+            Console.WriteLine($"Failed to encrypt: {filePath} \nError: {ex}");
         }
     }
 
-    public void Decrypt(string file)
+    public void DecryptFile(string filePath)
     {
-        if (!FileOperations.ValidateFile(file))
+        if (!FileOperations.ValidateFile(filePath))
         {
             return;
         }
 
         try
         {
-            string newFile = Path.ChangeExtension(file, null);
+
+            string newFilePath = Path.ChangeExtension(filePath, null);
+
+            if (!Program.IgnoreNames)
+            {
+                string fileName = Path.ChangeExtension(Path.GetFileName(filePath), null);
+                string decryptedName = DecryptFileName(FileOperations.RestoreFaultyName(fileName), aes);
+                newFilePath = Path.Combine(Path.GetDirectoryName(filePath), decryptedName);
+            }
 
             using (ICryptoTransform decryptor = aes.CreateDecryptor())
             {
-                using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-                using FileStream outputStream = new(newFile, FileMode.Create, FileAccess.Write);
+                using FileStream inputStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+                using FileStream outputStream = new(newFilePath, FileMode.Create, FileAccess.Write);
                 using CryptoStream cryptoStream = new(outputStream, decryptor, CryptoStreamMode.Write);
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
@@ -71,12 +89,12 @@ public class Cryptography
                 }
             }
 
-            FileOperations.SetFileDates(newFile, file);
-            FileOperations.Delete(file);
+            FileOperations.SetFileDates(newFilePath, filePath);
+            FileOperations.Delete(filePath);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to decrypt: {file} \nError: {ex}");
+            Console.WriteLine($"Failed to decrypt: {filePath} \nError: {ex}");
         }
     }
 
@@ -114,4 +132,21 @@ public class Cryptography
         byte[] IV = KeyDerivation.DeriveIV(aesKey);
         return (IV, aesKey);
     }
+
+    public static string EncryptFileName(string fileName, Aes aes)
+    {
+        using ICryptoTransform encryptor = aes.CreateEncryptor();
+        byte[] bytes = Encoding.UTF8.GetBytes(fileName);
+        byte[] encryptedBytes = encryptor.TransformFinalBlock(bytes, 0, bytes.Length);
+        return Convert.ToBase64String(encryptedBytes);
+    }
+
+    public static string DecryptFileName(string encryptedFileName, Aes aes)
+    {
+        using ICryptoTransform decryptor = aes.CreateDecryptor();
+        byte[] encryptedBytes = Convert.FromBase64String(encryptedFileName);
+        byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+        return Encoding.UTF8.GetString(decryptedBytes);
+    }
+
 }

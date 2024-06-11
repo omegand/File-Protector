@@ -49,6 +49,7 @@ Ensure that you have the following prerequisites installed:
 - **--de**: Will only decrypt.
 - **-s**: After decryption/encryption, will not delete previous older files.
 - **-l**: Limit the number of files processed. Negative numbers will return from the end.
+- **--name**: Will ignore file name encryption if selected.
 - **--help**: Display a help screen.
 
 ### Examples

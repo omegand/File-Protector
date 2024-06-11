@@ -19,6 +19,9 @@ internal class Options
     [Option('s', HelpText = "After decryption/encryption, keep previous older files.")]
     public bool SafeMode { get; set; }
 
+    [Option("name", HelpText = "Ignore encrypting file names.")]
+    public bool IgnoreNames { get; set; }
+
     [Option('l', HelpText = "Limit the number of processed files. Use negative numbers to count from the end.")]
     public int Limit { get; set; }
 }

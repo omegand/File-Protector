@@ -1,9 +1,15 @@
-﻿namespace FileProtector;
+﻿using System.Text;
+
+namespace FileProtector;
 
 public class FileOperations
 {
     public static readonly string encryptionAppend = ".encr";
-
+    private static readonly Dictionary<char, char> replacements = new()
+    {
+            { '+', '-' },
+            { '/', '_' }
+        };
     public static void Delete(string path)
     {
         if (Program.SafeMode)
@@ -90,4 +96,23 @@ public class FileOperations
         return files[true].Length == 0 && files[false].Length == 0;
     }
 
+    public static string FixFaultyFileName(string name)
+    {
+        return ReplaceCharacters(name, replacements);
+    }
+
+    public static string RestoreFaultyName(string name)
+    {
+        return ReplaceCharacters(name, replacements.ToDictionary(kvp => kvp.Value, kvp => kvp.Key));
+    }
+
+    private static string ReplaceCharacters(string input, Dictionary<char, char> replacements)
+    {
+        StringBuilder sb = new(input.Length);
+        foreach (char ch in input)
+        {
+            _ = sb.Append(replacements.TryGetValue(ch, out char replacement) ? replacement : ch);
+        }
+        return sb.ToString();
+    }
 }
