@@ -2,7 +2,7 @@
 using System.Diagnostics;
 
 namespace FileProtector;
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "CONSTRUCTOR CHECKS FOR WINDOWS")]
+
 internal class ContextMenuOperations
 {
     private const string MenuName = "File Protector";
@@ -42,12 +42,15 @@ internal class ContextMenuOperations
             using (RegistryKey key = Registry.ClassesRoot.CreateSubKey(DirectoryShellPath))
             {
                 key.SetValue("MUIVerb", MenuName);
-                key.SetValue("SubCommands", $"{AssemblyName}.encrypt;{AssemblyName}.decrypt");
+                key.SetValue("SubCommands", $"{AssemblyName}.encrypt;{AssemblyName}.decrypt;{AssemblyName}.encrypt_admin;{AssemblyName}.decrypt_admin");
                 key.SetValue("Icon", ProgramPath);
             }
 
-            RegisterContextMenuCommand("encrypt", "--en -d \"%1\"");
-            RegisterContextMenuCommand("decrypt", "--de -d \"%1\"");
+            RegisterContextMenuCommand("encrypt", "--en -d \"%1\"", false);
+            RegisterContextMenuCommand("decrypt", "--de -d \"%1\"", false);
+
+            RegisterContextMenuCommand("encrypt_admin", "--en -d \"%1\"", true);
+            RegisterContextMenuCommand("decrypt_admin", "--de -d \"%1\"", true);
 
             Console.WriteLine("Context menu added successfully.");
         }
@@ -57,13 +60,27 @@ internal class ContextMenuOperations
         }
     }
 
-    private static void RegisterContextMenuCommand(string command, string arguments)
+    private static void RegisterContextMenuCommand(string command, string arguments, bool runAsAdmin)
     {
         using RegistryKey baseReg = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
         using RegistryKey key = baseReg.CreateSubKey(CommandStorePath + $"{AssemblyName}.{command}");
-        key.SetValue(null, Utility.FirstCharToUpper(command));
+
+        // Display name for the command
+        string commandName = Utility.FirstCharToUpper(command.Replace("_admin", "")) + (runAsAdmin ? " (Admin)" : "");
+        key.SetValue(null, commandName);
+
         using RegistryKey commandKey = key.CreateSubKey("command");
-        commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
+
+        // Use the "runas" verb to run the command as administrator if specified
+        if (runAsAdmin)
+        {
+            commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
+            commandKey.SetValue("DelegateExecute", "");
+        }
+        else
+        {
+            commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
+        }
     }
 
     private static void RemoveContextMenu()
@@ -73,6 +90,8 @@ internal class ContextMenuOperations
             Registry.ClassesRoot.DeleteSubKeyTree(DirectoryShellPath, false);
             Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.encrypt", false);
             Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.decrypt", false);
+            Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.encrypt_admin", false);
+            Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.decrypt_admin", false);
 
             Console.WriteLine("Context menu removed successfully.");
         }
