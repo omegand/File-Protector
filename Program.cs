@@ -1,86 +1,88 @@
 ﻿using CommandLine;
+using FileProtector.CommandLineOptions;
+using FileProtector.Enums;
 using System.Diagnostics;
 
 namespace FileProtector;
-//Error codes:
-//9 - Problem with arguments
-//6 - User based exit  
-//3 - No files found
-//4 - Problem with OS permissions
-//5 - Unsupported OS
-public enum Actions
+public static class Program
 {
-    Encrypt,
-    Decrypt,
-    Both
-}
-
-public class Program
-{
-    public static bool SafeMode;
-    public static bool IgnoreNames;
-    private static Cryptography? Crypto;
-    private static Actions Action = Actions.Both;
-    private static Dictionary<bool, string[]> files = new();
+    public static bool SafeMode { get; set; }
+    public static bool IgnoreNames { get; set; }
+    private static Cryptography? Crypto { get; set; }
+    private static ProcessActions Action { get; set; } = ProcessActions.Both;
+    private static Dictionary<bool, string[]> FilesToProcess { get; set; } = [];
 
     private static void Main(string[] args)
     {
-        ParserResult<object> parserResult = Parser.Default.ParseArguments<Options, ToggleContextMenu, Server>(args);
-        _ = parserResult.WithParsed<Options>(RunWithOptions)
-                    .WithParsed<ToggleContextMenu>(ctx => ContextMenuOperations.ToggleContextMenu())
-                    .WithParsed<Server>(ServerClientOperations.ServerLoop);
-        Console.WriteLine("Press any key to close...");
-        _ = Console.ReadKey();
-        return;
+        if (!Utility.IsWindows())
+        {
+            Console.WriteLine("Application only supported for windows.");
+            return;
+        }
+        ParserResult<object> parserResult = Parser.Default.ParseArguments<FileProcessingOptions, ContextMenuToggleOptions, InternalServerOptions>(args);
+
+        _ = parserResult.MapResult(
+            (FileProcessingOptions opts) => RunWithOptions(opts),
+            (ContextMenuToggleOptions opts) => ContextMenuOperations.ToggleContextMenu(),
+            (InternalServerOptions opts) => PasswordStorage.StorePassword(opts),
+            _ => 1
+            );
+
+        Console.WriteLine("Finished.");
     }
 
-    private static void RunWithOptions(Options options)
+    private static int RunWithOptions(FileProcessingOptions options)
     {
         Console.WriteLine("Do not exit the program until it's done, as it might corrupt your files.");
         CheckArguments(options);
         CheckFiles(options);
         CheckPasswordArgument(options);
-        ServerClientOperations.StartServer(options.Password);
+        PasswordStorage.StartServer(options.Password);
 
         (byte[] IV, byte[] aesKey) = Cryptography.GetKeys(options.Password);
         Crypto = new(aesKey, IV);
 
-        Information info = new(files, options.Password);
+        Information info = new(FilesToProcess, options.Password);
         if (!Utility.ConfirmAction(info.ToString()))
         {
             Utility.ExitWithInput(6);
         }
 
         Stopwatch sw = Stopwatch.StartNew();
-        ProcessFiles(files);
+        ProcessFiles(FilesToProcess);
         sw.Stop();
         Console.WriteLine($"Process took: {sw.Elapsed}");
-        Console.WriteLine("Peak Memory Usage: " + (Process.GetCurrentProcess().PeakWorkingSet64 / (1024 * 1024)) + " MB");
+        Console.WriteLine($"Peak Memory Usage: {Process.GetCurrentProcess().PeakWorkingSet64 / (1024 * 1024)} MB");
         Console.WriteLine("Done.");
+
+        return 0;
     }
 
-    private static void CheckFiles(Options options)
+    private static void CheckFiles(FileProcessingOptions options)
     {
-        files = FileOperations.GetFiles(options.Directory, options.Limit, Action);
-        if (FileOperations.Empty(files))
+        FilesToProcess = FileOperations.GetFiles(options.Directory, options.Limit, Action);
+        if (FileOperations.Empty(FilesToProcess))
         {
-            Console.WriteLine($"Did not find any files.\n{options.Directory}");
+            Console.WriteLine($"Did not find any FilesToProcess.\n{options.Directory}");
             Utility.ExitWithInput(3);
         }
     }
 
-    private static void CheckPasswordArgument(Options options)
+    private static void CheckPasswordArgument(FileProcessingOptions options)
     {
-        TryGetPassword(options);
+        if (string.IsNullOrWhiteSpace(options.Password))
+        {
+            options.Password = PasswordStorage.GetPasswordFromServer();
+            Console.WriteLine($"Got password from server: {options.Password}");
+        }
 
         while (!PasswordIsValid(options.Password))
         {
-            options.Password = "";
-            TryGetPassword(options, false);
+            options.Password = Utility.GetInput("Enter your password:");
         }
     }
 
-    private static void CheckArguments(Options options)
+    private static void CheckArguments(FileProcessingOptions options)
     {
         if (options.EncryptOnly && options.DecryptOnly)
         {
@@ -88,20 +90,20 @@ public class Program
             Utility.ExitWithInput(9);
         }
 
-        if (options.EncryptOnly)
-        {
-            Action = Actions.Encrypt;
-        }
-
-        if (options.DecryptOnly)
-        {
-            Action = Actions.Decrypt;
-        }
-
         if (!Directory.Exists(options.Directory))
         {
             Console.WriteLine($"Argument: {options.Directory} isn't a directory or doesn't exist, try again.");
             Utility.ExitWithInput(9);
+        }
+
+        if (options.EncryptOnly)
+        {
+            Action = ProcessActions.Encrypt;
+        }
+
+        if (options.DecryptOnly)
+        {
+            Action = ProcessActions.Decrypt;
         }
 
         if (options.SafeMode)
@@ -117,39 +119,15 @@ public class Program
         }
     }
 
-    private static void TryGetPassword(Options options, bool checkServer = true)
-    {
-        if (string.IsNullOrWhiteSpace(options.Password))
-        {
-            string password = "";
-
-            if (checkServer)
-            {
-                password = ServerClientOperations.GetPasswordFromServer();
-            }
-
-            if (password == "")
-            {
-                Console.WriteLine("Password server doesn't exist or is incorrect.");
-                password = InputPassword();
-            }
-            options.Password = password;
-        }
-    }
-
-    private static string InputPassword()
-    {
-        string password = "";
-        while (string.IsNullOrWhiteSpace(password))
-        {
-            password = Utility.GetInput("Enter your password:");
-        }
-        return password;
-    }
-
-    //true = encrypted files, false = regular
+    //true = encrypted FilesToProcess, false = regular
     private static void ProcessFiles(Dictionary<bool, string[]> allFiles)
     {
+        if (Crypto is null)
+        {
+            Console.WriteLine("Failed to instantiate Cryptography class, cancelling process.");
+            return;
+        }
+
         if (allFiles.TryGetValue(true, out string[]? encryptedFiles))
         {
             ParallelProcessFiles(encryptedFiles, Crypto.DecryptFile);
@@ -162,26 +140,26 @@ public class Program
 
     private static void ParallelProcessFiles(string[] files, Action<string> fileProcessingAction)
     {
-        _ = Parallel.ForEach(files, file =>
-        {
-            fileProcessingAction(file);
-        });
+        _ = Parallel.ForEach(files, file => fileProcessingAction(file));
     }
 
     private static bool PasswordIsValid(string password)
     {
-        if (files.ContainsKey(true) && files[true].Length > 0)
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return false;
+        }
+
+        if (FilesToProcess.TryGetValue(true, out string[]? files) && files.Length > 0)
         {
             Console.WriteLine("Checking if password is valid...");
-            if (!Cryptography.TestDecryption(files[true][0], password))
-            {
-                Console.WriteLine("Password is not valid.");
-                return false;
-            }
-            Console.WriteLine("Password is correct.");
+
+            bool isPasswordValid = Cryptography.TestDecryption(files[0], password);
+            Console.WriteLine(isPasswordValid ? "Password is correct." : "Password is not valid.");
+
+            return isPasswordValid;
         }
 
         return true;
     }
-
 }

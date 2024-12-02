@@ -2,18 +2,11 @@
 
 namespace FileProtector;
 
-public readonly struct Information
+public readonly struct Information(Dictionary<bool, string[]> allFiles, string password)
 {
-    public Information(Dictionary<bool, string[]> allFiles, string password)
-    {
-        EncryptCount = allFiles[false].Length;
-        DecryptCount = allFiles[true].Length;
-        Password = password;
-    }
-
-    public int EncryptCount { get; }
-    public int DecryptCount { get; }
-    public string Password { get; }
+    public int EncryptCount { get; } = allFiles[false].Length;
+    public int DecryptCount { get; } = allFiles[true].Length;
+    public string Password { get; } = password;
 
     public override string ToString()
     {

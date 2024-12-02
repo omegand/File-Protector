@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace FileProtector;
 
-internal class ContextMenuOperations
+internal static class ContextMenuOperations
 {
     private const string MenuName = "File Protector";
     private const string CommandStorePath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\";
@@ -14,16 +14,13 @@ internal class ContextMenuOperations
 
     static ContextMenuOperations()
     {
-        Utility.VerifyWindows();
-        Utility.VerifyAdmin();
-
-        ProcessModule? exePath = Process.GetCurrentProcess().MainModule;
-        ProgramPath = exePath.FileName;
-        AssemblyName = exePath.ModuleName[..^4];
+        ProcessModule? executablePath = Process.GetCurrentProcess().MainModule;
+        ProgramPath = executablePath.FileName;
+        AssemblyName = executablePath.ModuleName[..^4];
         DirectoryShellPath += AssemblyName;
     }
 
-    public static void ToggleContextMenu()
+    public static int ToggleContextMenu()
     {
         if (RegistryKeyExists(DirectoryShellPath))
         {
@@ -33,6 +30,8 @@ internal class ContextMenuOperations
         {
             AddContextMenu();
         }
+
+        return 0;
     }
 
     private static void AddContextMenu()
@@ -105,7 +104,7 @@ internal class ContextMenuOperations
     {
         try
         {
-            using RegistryKey key = Registry.ClassesRoot.OpenSubKey(path);
+            using RegistryKey? key = Registry.ClassesRoot.OpenSubKey(path);
             return key != null;
         }
         catch (Exception ex)
