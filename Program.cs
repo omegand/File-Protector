@@ -29,11 +29,11 @@ public static class Program
             );
 
         Console.WriteLine("Finished.");
+        _ = Console.ReadKey();
     }
 
     private static int RunWithOptions(FileProcessingOptions options)
     {
-        Console.WriteLine("Do not exit the program until it's done, as it might corrupt your files.");
         CheckArguments(options);
         CheckFiles(options);
         CheckPasswordArgument(options);
@@ -53,7 +53,6 @@ public static class Program
         sw.Stop();
         Console.WriteLine($"Process took: {sw.Elapsed}");
         Console.WriteLine($"Peak Memory Usage: {Process.GetCurrentProcess().PeakWorkingSet64 / (1024 * 1024)} MB");
-        Console.WriteLine("Done.");
 
         return 0;
     }
@@ -73,7 +72,6 @@ public static class Program
         if (string.IsNullOrWhiteSpace(options.Password))
         {
             options.Password = PasswordStorage.GetPasswordFromServer();
-            Console.WriteLine($"Got password from server: {options.Password}");
         }
 
         while (!PasswordIsValid(options.Password))
@@ -152,8 +150,6 @@ public static class Program
 
         if (FilesToProcess.TryGetValue(true, out string[]? files) && files.Length > 0)
         {
-            Console.WriteLine("Checking if password is valid...");
-
             bool isPasswordValid = Cryptography.TestDecryption(files[0], password);
             Console.WriteLine(isPasswordValid ? "Password is correct." : "Password is not valid.");
 

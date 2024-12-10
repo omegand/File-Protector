@@ -59,7 +59,7 @@ public static class Utility
     {
         if (!OperatingSystem.IsWindows())
         {
-            Console.WriteLine("There's currently only Windows support for this action.");
+            Console.WriteLine("There's currently only Windows support.");
             ExitWithInput(5);
             return false;
         }
@@ -67,13 +67,8 @@ public static class Utility
         return true;
     }
 
-    public static void VerifyIsWindowsAdmin()
+    public static bool IsWindowsAdmin()
     {
-        if (!IsWindows())
-        {
-            return;
-        }
-
         WindowsIdentity windowsIdentity = WindowsIdentity.GetCurrent();
         WindowsPrincipal windowsPrincipal = new(windowsIdentity);
 
@@ -81,7 +76,10 @@ public static class Utility
         {
             Console.WriteLine("You need to run the program as administrator to do this.");
             ExitWithInput(4);
+            return false;
         }
+
+        return true;
     }
 
     public static void ExitWithInput(int code)
