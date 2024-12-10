@@ -1,9 +1,8 @@
 # Filep - File Encryption and Decryption CLI
 
-**WARNING: PASSWORD IS UNRECOVERABLE; DO NOT FORGET IT. ENCRYPTED FILES WILL BE LOST IF YOU FORGET YOUR PASSWORD.**
+**WARNING: ENCRYPTED FILES WILL BE LOST IF YOU FORGET YOUR PASSWORD.**
 
-
- This is a simple Command Line Interface (CLI) program designed for parallel encryption and decryption of files using a password. This tool provides a straightforward and secure way to process directories with file encryption and decryption functionalities.
+A simple Command Line Interface (CLI) program designed for parallel encryption and decryption of files using a password.
 
 ## Table of Contents
 
@@ -20,6 +19,8 @@
 - Parallel processing for efficient encryption and decryption of files.
 - Ability to encrypt, decrypt, or perform both actions on a specified directory.
 - Supports keeping older files after decryption/encryption.
+- Support for limiting the amount of files.
+- Support for additionally encrypting file names as well.
 - Argon2id key derivation.
 - Sequential encryption/decryption for better performance and lower memory usage.
 
@@ -27,17 +28,16 @@
 
 ### Prerequisites
 
-Ensure that you have the following prerequisites installed:
+Ensure that you have the following prerequisite installed:
 
-- [ .NET 7.0](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+- [ .NET 9.0](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 
 ### Installation
 
-1. Download latest executable from the [Releases](https://github.com/omegand/File-Protector/releases) tab.
-2. Run it through the command line.
+1. Download the latest executable from the [Releases](https://github.com/omegand/File-Protector/releases) tab.
+2. Run it using the command line. See [Usage](#usage).
 3. Optionally, set it in PATH to use it anywhere using cmd.
-4. Optionally, enable it in Windows context menu.
-
+4. Optionally, enable it in Windows context menu. See [Examples](#examples).
 
 ## Usage
 
@@ -49,7 +49,7 @@ Ensure that you have the following prerequisites installed:
 - **--de**: Will only decrypt.
 - **-s**: After decryption/encryption, will not delete previous older files.
 - **-l**: Limit the number of files processed. Negative numbers will return from the end.
-- **--name**: Will ignore file name encryption if selected.
+- **--name**: Will ignore file name encryption.
 - **--help**: Display a help screen.
 
 ### Examples
@@ -85,5 +85,3 @@ Ensure that you have the following prerequisites installed:
     filep togglecontext
     ```
     *note:* If you move the executable, you will need to remove and re-add the context menu.
-
-
