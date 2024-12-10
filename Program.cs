@@ -37,7 +37,6 @@ public static class Program
         CheckArguments(options);
         CheckFiles(options);
         CheckPasswordArgument(options);
-        PasswordStorage.StartServer(options.Password);
 
         (byte[] IV, byte[] aesKey) = Cryptography.GetKeys(options.Password);
         Crypto = new(aesKey, IV);
@@ -69,14 +68,22 @@ public static class Program
 
     private static void CheckPasswordArgument(FileProcessingOptions options)
     {
+        bool validServerPassword = false;
         if (string.IsNullOrWhiteSpace(options.Password))
         {
             options.Password = PasswordStorage.GetPasswordFromServer();
+            validServerPassword = true;
         }
 
         while (!PasswordIsValid(options.Password))
         {
+            validServerPassword = false;
             options.Password = Utility.GetInput("Enter your password:");
+        }
+
+        if (!validServerPassword)
+        {
+            PasswordStorage.StartServer(options.Password);
         }
     }
 

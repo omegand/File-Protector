@@ -6,11 +6,19 @@ namespace FileProtector;
 internal static class PasswordStorage
 {
     private const string MapName = "8b9c4777e1b15385f086b5c";
-
+    private const string MutexName = "Global\\UniqueServerMutex-sd-0g8sd0923hblkjg";
     public static void StartServer(string password)
     {
         try
         {
+            using (Mutex mutex = new(true, MutexName, out bool isNew))
+            {
+                if (!isNew)
+                {
+                    return;
+                }
+            }
+
             string? currentExecutable = Environment.ProcessPath;
             if (currentExecutable is null)
             {
@@ -47,6 +55,7 @@ internal static class PasswordStorage
         using MemoryMappedViewAccessor writer = mmf.CreateViewAccessor(0, 1024);
         byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(opts.Password);
         writer.WriteArray(0, passwordBytes, 0, passwordBytes.Length);
+        using Mutex mutex = new(true, MutexName);
         while (true)
         {
             Thread.Sleep(10000);
