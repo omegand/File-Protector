@@ -2,7 +2,8 @@
   "profiles": {
     "Folder-Encrypter": {
       "commandName": "Project",
-      "commandLineArgs": "",
+     // "commandLineArgs": "server -p labas123!",
+      "commandLineArgs": "-d C:\\Users\\Omegand\\Desktop\\pf3",
       "workingDirectory": "C:\\Users\\Omegand\\Desktop\\Folder-Encrypter"
     }
   }

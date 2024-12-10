@@ -6,7 +6,7 @@ namespace FileProtector;
 public class Cryptography
 {
     private readonly Aes aes;
-    public const int bufferSize = 1024 * 1024 * 16; // From my research, seems to be a good number for performance and ram-usage
+    public const int bufferSize = 1024 * 1024 * 16;
     public Cryptography(byte[] aesKey, byte[] IV)
     {
         aes = Aes.Create();
@@ -23,10 +23,15 @@ public class Cryptography
 
         try
         {
-
             string fileName = Path.GetFileName(filePath);
             string encryptedName = FileOperations.FixFaultyFileName(EncryptFileName(fileName, aes)) + FileOperations.encryptionAppend;
-            string newFilePath = Path.Combine(Path.GetDirectoryName(filePath), encryptedName);
+            string? directoryName = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrWhiteSpace(directoryName))
+            {
+                Console.WriteLine("Failure to parse directory name.");
+                return;
+            }
+            string newFilePath = Path.Combine(directoryName, encryptedName);
 
             if (Program.IgnoreNames)
             {
@@ -65,14 +70,19 @@ public class Cryptography
 
         try
         {
-
             string newFilePath = Path.ChangeExtension(filePath, null);
 
             if (!Program.IgnoreNames)
             {
                 string fileName = Path.ChangeExtension(Path.GetFileName(filePath), null);
                 string decryptedName = DecryptFileName(FileOperations.RestoreFaultyName(fileName), aes);
-                newFilePath = Path.Combine(Path.GetDirectoryName(filePath), decryptedName);
+                string? directoryName = Path.GetDirectoryName(filePath);
+                if (string.IsNullOrWhiteSpace(directoryName))
+                {
+                    Console.WriteLine("Failure to parse directory name.");
+                    return;
+                }
+                newFilePath = Path.Combine(directoryName, decryptedName);
             }
 
             using (ICryptoTransform decryptor = aes.CreateDecryptor())
@@ -112,12 +122,8 @@ public class Cryptography
             using ICryptoTransform decryptor = aes.CreateDecryptor(aesKey, IV);
             using FileStream inputStream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
             using CryptoStream cryptoStream = new(inputStream, decryptor, CryptoStreamMode.Read);
-            byte[] buffer = new byte[bufferSize];
-            int bytesRead;
+            cryptoStream.CopyTo(Stream.Null, bufferSize);
 
-            while ((bytesRead = cryptoStream.Read(buffer, 0, bufferSize)) > 0)
-            {
-            }
             return true;
         }
         catch (Exception)
@@ -148,5 +154,4 @@ public class Cryptography
         byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
         return Encoding.UTF8.GetString(decryptedBytes);
     }
-
 }

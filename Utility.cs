@@ -3,16 +3,8 @@ using System.Text;
 
 namespace FileProtector;
 
-public class Utility
+public static class Utility
 {
-    public static void PrintArray<T>(T[] array)
-    {
-        for (int i = 0; i < array.Length; i++)
-        {
-            Console.WriteLine(array[i].ToString());
-        }
-    }
-
     public static string GetInput(string prompt)
     {
         Console.Write(prompt);
@@ -53,36 +45,29 @@ public class Utility
         }
     }
 
-    public static bool BytesEqual(byte[] a, byte[] b)
-    {
-        int xor = a.Length ^ b.Length;
-
-        for (int i = 0; i < a.Length && i < b.Length; ++i)
-        {
-            xor |= a[i] ^ b[i];
-        }
-        return xor == 0;
-    }
-
     public static string FirstCharToUpper(string input)
     {
-        if (input is null or "")
+        if (string.IsNullOrWhiteSpace(input))
         {
-            Console.WriteLine("Cannot capitalize string as it's null or empty.");
+            Console.WriteLine("Failed to capitalize string as input is null, empty or a whitespace.");
             return input;
         }
         return string.Concat(input[0].ToString().ToUpper(), input.AsSpan(1));
     }
-    public static void VerifyWindows()
+
+    public static bool IsWindows()
     {
         if (!OperatingSystem.IsWindows())
         {
-            Console.WriteLine("There's currently only Windows support for this action.");
+            Console.WriteLine("There's currently only Windows support.");
             ExitWithInput(5);
+            return false;
         }
+
+        return true;
     }
 
-    public static void VerifyAdmin()
+    public static bool IsWindowsAdmin()
     {
         WindowsIdentity windowsIdentity = WindowsIdentity.GetCurrent();
         WindowsPrincipal windowsPrincipal = new(windowsIdentity);
@@ -90,9 +75,11 @@ public class Utility
         if (!windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
         {
             Console.WriteLine("You need to run the program as administrator to do this.");
-
             ExitWithInput(4);
+            return false;
         }
+
+        return true;
     }
 
     public static void ExitWithInput(int code)
@@ -101,6 +88,7 @@ public class Utility
         _ = Console.ReadKey();
         Environment.Exit(code);
     }
+
     public static byte[] ToBytes(string str)
     {
         return Encoding.UTF8.GetBytes(str);

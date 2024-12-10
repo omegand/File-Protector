@@ -3,29 +3,32 @@ using System.Diagnostics;
 
 namespace FileProtector;
 
-internal class ContextMenuOperations
+internal static class ContextMenuOperations
 {
     private const string MenuName = "File Protector";
-    private const string CommandStorePath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\";
-
-    private static readonly string DirectoryShellPath = @"Directory\shell\";
+    private const string CommandStoreBasePath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\";
     private static readonly string ProgramPath;
     private static readonly string AssemblyName;
+    private static readonly string DirectoryShellPath;
 
     static ContextMenuOperations()
     {
-        Utility.VerifyWindows();
-        Utility.VerifyAdmin();
+        ProcessModule process = Process.GetCurrentProcess().MainModule
+            ?? throw new InvalidOperationException("Failed to get current process.");
 
-        ProcessModule? exePath = Process.GetCurrentProcess().MainModule;
-        ProgramPath = exePath.FileName;
-        AssemblyName = exePath.ModuleName[..^4];
-        DirectoryShellPath += AssemblyName;
+        ProgramPath = process.FileName;
+        AssemblyName = Path.GetFileNameWithoutExtension(process.ModuleName);
+        DirectoryShellPath = $@"Directory\shell\{AssemblyName}";
     }
 
-    public static void ToggleContextMenu()
+    public static int ToggleContextMenu()
     {
-        if (RegistryKeyExists(DirectoryShellPath))
+        if (!Utility.IsWindowsAdmin())
+        {
+            return 1;
+        }
+
+        if (IsContextMenuRegistered())
         {
             RemoveContextMenu();
         }
@@ -33,85 +36,93 @@ internal class ContextMenuOperations
         {
             AddContextMenu();
         }
+
+        return 0;
+    }
+
+    private static bool IsContextMenuRegistered()
+    {
+        return Registry.ClassesRoot.OpenSubKey(DirectoryShellPath) != null;
     }
 
     private static void AddContextMenu()
     {
         try
         {
-            using (RegistryKey key = Registry.ClassesRoot.CreateSubKey(DirectoryShellPath))
-            {
-                key.SetValue("MUIVerb", MenuName);
-                key.SetValue("SubCommands", $"{AssemblyName}.encrypt;{AssemblyName}.decrypt;{AssemblyName}.encrypt_admin;{AssemblyName}.decrypt_admin");
-                key.SetValue("Icon", ProgramPath);
-            }
-
-            RegisterContextMenuCommand("encrypt", "--en -d \"%1\"", false);
-            RegisterContextMenuCommand("decrypt", "--de -d \"%1\"", false);
-
-            RegisterContextMenuCommand("encrypt_admin", "--en -d \"%1\"", true);
-            RegisterContextMenuCommand("decrypt_admin", "--de -d \"%1\"", true);
-
+            RegisterMainContextMenuKey();
+            RegisterContextMenuCommands();
             Console.WriteLine("Context menu added successfully.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error adding context menu: " + ex.Message);
+            Console.WriteLine($"Error adding context menu: {ex.Message}");
         }
     }
 
-    private static void RegisterContextMenuCommand(string command, string arguments, bool runAsAdmin)
+    private static void RegisterMainContextMenuKey()
+    {
+        using RegistryKey key = Registry.ClassesRoot.CreateSubKey(DirectoryShellPath);
+        key.SetValue("MUIVerb", MenuName);
+        key.SetValue("SubCommands", $"{AssemblyName}.encrypt;{AssemblyName}.decrypt;{AssemblyName}.encrypt_admin;{AssemblyName}.decrypt_admin");
+        key.SetValue("Icon", ProgramPath);
+    }
+
+    private static void RegisterContextMenuCommands()
+    {
+        var commands = new[]
+        {
+            new { Name = "encrypt", Args = "--en -d \"%1\"", Admin = false },
+            new { Name = "decrypt", Args = "--de -d \"%1\"", Admin = false },
+            new { Name = "encrypt_admin", Args = "--en -d \"%1\"", Admin = true },
+            new { Name = "decrypt_admin", Args = "--de -d \"%1\"", Admin = true }
+        };
+
+        foreach (var cmd in commands)
+        {
+            RegisterSingleContextMenuCommand(cmd.Name, cmd.Args, cmd.Admin);
+        }
+    }
+
+    private static void RegisterSingleContextMenuCommand(string command, string arguments, bool runAsAdmin)
     {
         using RegistryKey baseReg = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-        using RegistryKey key = baseReg.CreateSubKey(CommandStorePath + $"{AssemblyName}.{command}");
+        using RegistryKey key = baseReg.CreateSubKey(CommandStoreBasePath + $"{AssemblyName}.{command}");
 
-        // Display name for the command
         string commandName = Utility.FirstCharToUpper(command.Replace("_admin", "")) + (runAsAdmin ? " (Admin)" : "");
         key.SetValue(null, commandName);
 
         using RegistryKey commandKey = key.CreateSubKey("command");
+        commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
 
-        // Use the "runas" verb to run the command as administrator if specified
         if (runAsAdmin)
         {
-            commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
             commandKey.SetValue("DelegateExecute", "");
-        }
-        else
-        {
-            commandKey.SetValue(null, $"\"{ProgramPath}\" {arguments}");
         }
     }
 
     private static void RemoveContextMenu()
     {
+        string[] commandsToRemove =
+        [
+            "encrypt", "decrypt", "encrypt_admin", "decrypt_admin"
+        ];
         try
         {
-            Registry.ClassesRoot.DeleteSubKeyTree(DirectoryShellPath, false);
-            Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.encrypt", false);
-            Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.decrypt", false);
-            Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.encrypt_admin", false);
-            Registry.LocalMachine.DeleteSubKeyTree(CommandStorePath + $"{AssemblyName}.decrypt_admin", false);
+            Registry.ClassesRoot.DeleteSubKeyTree(DirectoryShellPath);
+
+            foreach (string cmd in commandsToRemove)
+            {
+                Registry.LocalMachine.DeleteSubKeyTree(
+                    $"{CommandStoreBasePath}{AssemblyName}.{cmd}",
+                    false
+                );
+            }
 
             Console.WriteLine("Context menu removed successfully.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error removing context menu:\n" + ex.Message);
-        }
-    }
-
-    private static bool RegistryKeyExists(string path)
-    {
-        try
-        {
-            using RegistryKey key = Registry.ClassesRoot.OpenSubKey(path);
-            return key != null;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error checking registry key: {ex.Message}");
-            return false;
+            Console.WriteLine($"Error removing context menu: {ex.Message}");
         }
     }
 }

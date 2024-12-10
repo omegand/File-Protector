@@ -1,15 +1,16 @@
-﻿using System.Text;
+﻿using FileProtector.Enums;
+using System.Text;
 
 namespace FileProtector;
 
-public class FileOperations
+public static class FileOperations
 {
     public static readonly string encryptionAppend = ".encr";
     private static readonly Dictionary<char, char> replacements = new()
     {
-            { '+', '-' },
-            { '/', '_' }
-        };
+        { '+', '-' },
+        { '/', '_' }
+    };
     public static void Delete(string path)
     {
         if (Program.SafeMode)
@@ -21,28 +22,28 @@ public class FileOperations
     }
 
     /// <summary>
-    /// Retrieves encrypted and non-encrypted files from the specified directory.
+    /// Retrieves encrypted and non-encrypted FilesToProcess from the specified directory.
     /// </summary>
-    /// <param name="path">The directory path to search for files.</param>
-    /// <param name="limit">The maximum number of files to retrieve. Use 0 for no limit, a positive value for a limit from the start, and a negative value for a limit from the end.</param>
-    /// <returns>A dictionary where the key represents whether the files are encrypted (true) or not (false), and the value is an array of corresponding file paths.</returns>
-    public static Dictionary<bool, string[]> GetFiles(string path, int limit, Actions action)
+    /// <param name="path">The directory path to search for FilesToProcess.</param>
+    /// <param name="limit">The maximum number of FilesToProcess to retrieve. Use 0 for no limit, a positive value for a limit from the start, and a negative value for a limit from the end.</param>
+    /// <returns>A dictionary where the key represents whether the FilesToProcess are encrypted (true) or not (false), and the value is an array of corresponding file paths.</returns>
+    public static Dictionary<bool, string[]> GetFiles(string path, int limit, ProcessActions action)
     {
         string[] allFiles = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
 
         return action switch
         {
-            Actions.Encrypt => new Dictionary<bool, string[]>
+            ProcessActions.Encrypt => new Dictionary<bool, string[]>
             {
-                [true] = Array.Empty<string>(),
+                [true] = [],
                 [false] = GetRegularFiles(allFiles, limit)
             },
-            Actions.Decrypt => new Dictionary<bool, string[]>
+            ProcessActions.Decrypt => new Dictionary<bool, string[]>
             {
                 [true] = GetEncryptedFiles(allFiles, limit),
-                [false] = Array.Empty<string>()
+                [false] = []
             },
-            Actions.Both => new Dictionary<bool, string[]>
+            ProcessActions.Both => new Dictionary<bool, string[]>
             {
                 [true] = GetEncryptedFiles(allFiles, limit),
                 [false] = GetRegularFiles(allFiles, limit)
@@ -65,7 +66,12 @@ public class FileOperations
 
     private static string[] ApplyLimit(string[] files, int limit)
     {
-        return limit != 0 ? (limit > 0) ? files.Take(limit).ToArray() : files.TakeLast(Math.Abs(limit)).ToArray() : files;
+        return limit switch
+        {
+            0 => files,
+            > 0 => files.Take(limit).ToArray(),
+            < 0 => files.TakeLast(Math.Abs(limit)).ToArray(),
+        };
     }
 
     public static bool ValidateFile(string file)
@@ -91,7 +97,7 @@ public class FileOperations
         }
     }
 
-    public static bool Empty(Dictionary<bool, string[]> files)
+    public static bool Empty(IDictionary<bool, string[]> files)
     {
         return files[true].Length == 0 && files[false].Length == 0;
     }
